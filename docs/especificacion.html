@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
+<script src="../vendor/dc-runtime/support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="_ds/industry-7b7310f1-3001-441c-bb5d-53cba44ebaae/styles.css">
-<script src="_ds/industry-7b7310f1-3001-441c-bb5d-53cba44ebaae/_ds_bundle.js"></script>
-<script src="./doc-page.js"></script>
+<link rel="stylesheet" href="../vendor/design-system/styles.css">
+<script src="../vendor/design-system/ds-bundle.js"></script>
+<script src="../vendor/dc-runtime/doc-page.js"></script>
 <style>
 doc-page:not(:defined) { visibility: hidden; }
 body { margin: 0; }
@@ -39,7 +39,7 @@ a:hover { color: #f4711a; }
     <p>Sprint 1 cubre tres historias de usuario: <strong>HU-01</strong> registrar un envío (remitente + destinatario), <strong>HU-02</strong> registrar un evento logístico (un punto de la cadena reporta un movimiento), <strong>HU-03</strong> consultar el estado actual de un envío. Sprint 2 agrega <strong>HU-04</strong> consultar el historial de movimientos y <strong>HU-08</strong> iniciar y cerrar sesión.</p>
 
     <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">2. Estado de la entrega</h2>
-    <p>Prototipo funcional en un solo archivo, <code>TrackFlow.dc.html</code>, que consume la API real por red. No hay datos simulados: toda pantalla refleja lo que responde el backend, incluidos sus errores. La URL base es configurable; por defecto <code>https://trackflow-mxll.onrender.com</code> (despliegue del equipo, repositorio <code>TrackflowFE/FabricaEscuela-Proyecto-TrackFlow</code>), y se cambia a <code>http://localhost:8080</code> para desarrollo local (requiere <code>docker compose up -d</code> y <code>./mvnw spring-boot:run</code>).</p>
+    <p>Prototipo funcional en un solo archivo, <code>index.html</code>, que consume la API real por red. No hay datos simulados: toda pantalla refleja lo que responde el backend, incluidos sus errores. La URL base es configurable; por defecto <code>https://trackflow-mxll.onrender.com</code> (despliegue del equipo, repositorio <code>TrackflowFE/FabricaEscuela-Proyecto-TrackFlow</code>), y se cambia a <code>http://localhost:8080</code> para desarrollo local (requiere <code>docker compose up -d</code> y <code>./mvnw spring-boot:run</code>).</p>
     <p>Toda petición tiene tiempo límite: 25 s para la consulta de rastreo (tolera el arranque en frío de Render), 6 s para el autocompletado de ciudad, 10 s el resto. Si se agota, la pantalla muestra el error de red con opción de reintentar, nunca un spinner infinito.</p>
 
     <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">3. Mapa de pantallas</h2>
