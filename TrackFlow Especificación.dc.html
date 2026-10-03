@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-7b7310f1-3001-441c-bb5d-53cba44ebaae/styles.css">
+<script src="_ds/industry-7b7310f1-3001-441c-bb5d-53cba44ebaae/_ds_bundle.js"></script>
+<script src="./doc-page.js"></script>
+<style>
+doc-page:not(:defined) { visibility: hidden; }
+body { margin: 0; }
+a { color: #1b4b8f; }
+a:hover { color: #f4711a; }
+</style>
+</helmet>
+<doc-page margin="0.8in">
+  <div style="font-family:var(--font-body);color:#1d1f20;font-size:11pt;line-height:1.5">
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:3px solid #14305c;padding-bottom:14px;margin-bottom:30px">
+      <div>
+        <div style="font-family:var(--font-heading);font-size:13pt;letter-spacing:.18em;text-transform:uppercase;color:#f4711a;margin-bottom:6px">TrackFlow · Sprint 1</div>
+        <h1 style="margin:0;font-size:34pt;line-height:1.02;letter-spacing:-.01em">Frontend: especificación y decisiones de diseño</h1>
+      </div>
+      <div style="text-align:right;font-size:9pt;color:rgba(29,31,32,.6);flex:none;font-variant-numeric:tabular-nums">
+        <div>Septiembre 2026</div>
+        <div>Prototipo HTML</div>
+      </div>
+    </div>
+
+    <p style="font-size:13pt;color:rgba(29,31,32,.8);margin-bottom:30px;max-width:52em">TrackFlow conecta cada punto de tu cadena logística en un solo lugar: registra el envío, reporta su paso por cada centro de distribución y consulta el estado en tiempo real con tu número de guía.</p>
+
+    <h2 style="font-size:19pt;margin:0 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">1. Contexto</h2>
+    <p>Sistema de registro y seguimiento de envíos. El backend está construido, probado end-to-end y desplegado: Spring Boot, monolito modular con ingesta por eventos (RabbitMQ), PostgreSQL sobre Supabase en producción. Este documento cubre únicamente el frontend.</p>
+    <p>Sprint 1 cubre tres historias de usuario: <strong>HU-01</strong> registrar un envío (remitente + destinatario), <strong>HU-02</strong> registrar un evento logístico (un punto de la cadena reporta un movimiento), <strong>HU-03</strong> consultar el estado actual de un envío. Sprint 2 agrega <strong>HU-04</strong> consultar el historial de movimientos y <strong>HU-08</strong> iniciar y cerrar sesión.</p>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">2. Estado de la entrega</h2>
+    <p>Prototipo funcional en un solo archivo, <code>TrackFlow.dc.html</code>, que consume la API real por red. No hay datos simulados: toda pantalla refleja lo que responde el backend, incluidos sus errores. La URL base es configurable; por defecto <code>https://trackflow-mxll.onrender.com</code> (despliegue del equipo, repositorio <code>TrackflowFE/FabricaEscuela-Proyecto-TrackFlow</code>), y se cambia a <code>http://localhost:8080</code> para desarrollo local (requiere <code>docker compose up -d</code> y <code>./mvnw spring-boot:run</code>).</p>
+    <p>Toda petición tiene tiempo límite: 25 s para la consulta de rastreo (tolera el arranque en frío de Render), 6 s para el autocompletado de ciudad, 10 s el resto. Si se agota, la pantalla muestra el error de red con opción de reintentar, nunca un spinner infinito.</p>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">3. Mapa de pantallas</h2>
+    <table class="table" style="font-size:10.5pt;margin-bottom:8px">
+      <thead><tr><th style="width:26%">Pantalla</th><th style="width:14%">Acceso</th><th>Contenido</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Home / Rastreo</strong></td><td>Público</td><td>Buscador de guía a pantalla completa sobre imagen de la red logística. Valida el formato antes de llamar al backend.</td></tr>
+        <tr><td><strong>Resultado</strong></td><td>Público</td><td>Resumen del envío (guía, estado, destino, registro, último punto y movimiento) y línea de tiempo vertical de eventos.</td></tr>
+        <tr><td><strong>Registrar envío</strong></td><td>Operador</td><td>Remitente y destinatario en columnas paralelas, más descripción. Confirmación con la guía generada.</td></tr>
+        <tr><td><strong>Registrar evento</strong></td><td>Operador</td><td>Movimiento sobre un envío existente: el tipo y el centro se eligen de las acciones que el backend permite en ese momento; repartidor obligatorio al salir a reparto; observaciones y fecha opcionales.</td></tr>
+        <tr><td><strong>Ingresar</strong></td><td>Público</td><td>Un solo formulario para operador y admin. El rol lo decide el backend. Si la sesión se cerró o venció, la UI vuelve aquí con el aviso "Sesión terminada".</td></tr>
+        <tr><td><strong>Admin</strong></td><td>Rol ADMIN</td><td>Reconstruir proyecciones. El item del nav solo aparece si el token trae ADMIN.</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:10pt;color:rgba(29,31,32,.6)">El nav público muestra <strong>Rastrear</strong>, un desplegable <strong>Operaciones</strong> con las dos pantallas de operador, e <strong>Ingresar</strong>.</p>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">4. Sistema visual</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px">
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13pt">Color</h4>
+        <p style="font-size:10.5pt;margin:0">Azul marino <code>#14305c</code> como estructura: nav, hero, pie. Naranja <code>#f4711a</code> reservado a las acciones — un solo botón naranja por pantalla. Fondo de trabajo claro <code>#f2f2f3</code> en las pantallas interiores. Sin color decorativo fuera de esos dos.</p>
+      </div>
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13pt">Tipografía</h4>
+        <p style="font-size:10.5pt;margin:0">Barlow Condensed en títulos, Barlow en texto, 16&nbsp;px de base. Los números de guía van con cifras tabulares y tracking amplio para que se lean como un código.</p>
+      </div>
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13pt">Forma</h4>
+        <p style="font-size:10.5pt;margin:0">Esquinas rectas, marcos de línea fina con marcas de registro en las esquinas, retícula visible de celdas iguales. Las tarjetas no llevan relleno: son dibujos de línea. El botón primario es el único objeto sólido.</p>
+      </div>
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13pt">Badges de estado</h4>
+        <p style="font-size:10.5pt;margin:0">Registrado gris · En centro de distribución azul · En tránsito azul · En reparto ámbar · Entregado verde.</p>
+      </div>
+    </div>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">5. Reglas transversales de la API</h2>
+    <ul style="padding-left:20px;margin:0 0 6px">
+      <li>Las escrituras son asíncronas: siempre <strong>202 Accepted</strong>, nunca 201. No hay confirmación instantánea de que el dato ya existe.</li>
+      <li><strong>El contrato está en inglés</strong> (rutas, campos y valores); los mensajes para el usuario siguen en español.</li>
+      <li>La ciudad es siempre un <code>cityId</code> numérico elegido por autocompletado, nunca texto libre.</li>
+      <li><code>documentType</code> y <code>documentNumber</code> son campos separados, con validación por tipo.</li>
+      <li>No existe editar ni borrar: no hay PUT, PATCH ni DELETE. Corregir un error significa registrar un evento nuevo.</li>
+      <li>Las consultas del cliente (tracking, historial, ciudades) son públicas y se llaman <strong>sin token</strong>. Las de la operación (acciones disponibles, centros, reportes) exigen token de operador.</li>
+      <li>Todos los errores llegan en formato ProblemDetail (<code>title</code>, <code>detail</code>, <code>status</code>), incluido el 404 de tracking.</li>
+      <li>Todo error 400 trae un <code>detail</code> legible; la UI lo muestra tal cual, sin reemplazarlo por texto genérico.</li>
+    </ul>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">6. Contrato consumido</h2>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">GET /api/cities?q={texto} — público</h4>
+    <p style="margin:0 0 14px">Hasta 10 coincidencias (<code>id</code>, <code>name</code>, <code>department</code>, <code>label</code>), primero las que empiezan por el texto. Mismo catálogo para origen y destino.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">POST /api/shipments — rol OPERADOR</h4>
+    <p style="margin:0 0 8px"><code>sender</code> y <code>recipient</code> con el mismo shape (<code>fullName</code>, <code>documentType</code>, <code>documentNumber</code>, <code>phone</code>, <code>address</code>, <code>cityId</code>) más <code>description</code>. Todos los campos obligatorios; la UI no envía la solicitud si falta alguno. Responde 202 con <code>trackingNumber</code>, <code>eventId</code>, <code>recipient</code>, <code>destinationCity</code>, <code>requestedAt</code> y <code>processingStatus</code> (<code>QUEUED</code>).</p>
+    <p style="margin:0 0 8px">El <code>trackingNumber</code> lo genera el backend: el formulario no tiene campo de guía, es puro output, y es definitivo desde la respuesta aunque el registro siga procesándose. La UI muestra "procesando" y reintenta <code>GET /api/tracking/{tn}</code> cada 300&nbsp;ms unos segundos para confirmar.</p>
+    <table class="table" style="font-size:10.5pt;margin-bottom:10px">
+      <thead><tr><th style="width:18%">Tipo</th><th>Formato del número de documento</th></tr></thead>
+      <tbody>
+        <tr><td>CC, CE</td><td>6 a 10 dígitos</td></tr>
+        <tr><td>TI</td><td>10 a 11 dígitos</td></tr>
+        <tr><td>PP</td><td>5 a 15 caracteres, letras mayúsculas y dígitos</td></tr>
+        <tr><td>NIT</td><td>9 a 10 dígitos; opcionalmente con dígito de verificación (890903938-8), validado contra las ponderaciones de la DIAN</td></tr>
+      </tbody>
+    </table>
+    <p style="margin:0 0 14px">El formato esperado se muestra dinámicamente bajo el campo según el tipo elegido. Los errores 400 llegan en formato ProblemDetail y, con campos faltantes, traen además <code>missingFields</code> (claves como <code>sender.fullName</code>); la UI marca cada campo.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">POST /api/shipments/{trackingNumber}/events — rol OPERADOR</h4>
+    <p style="margin:0 0 8px">Tipos: RECEIVED_AT_CENTER, DISPATCHED, ARRIVED_AT_DESTINATION_CENTER, OUT_FOR_DELIVERY, DELIVERED. <code>type</code> y <code>centerId</code> obligatorios, <code>delivererName</code> obligatorio en OUT_FOR_DELIVERY, <code>notes</code> y <code>occurredAt</code> opcionales.</p>
+    <p style="margin:0 0 8px">La UI envía la cabecera <code>Idempotency-Key</code>: si el registro falla por red y el operador reintenta, se reutiliza la misma clave y el backend devuelve el movimiento ya registrado en vez de duplicarlo. La clave se renueva al cambiar de guía, tipo o centro, y después de un registro exitoso.</p>
+    <p style="margin:0 0 14px">Si no se envía <code>occurredAt</code> se asume que el movimiento acaba de ocurrir; el campo se diseñó opcional con "ahora" por defecto y ayuda explícita para reportes tardíos. Una fecha futura devuelve 400. Guía inexistente devuelve 404. Un evento con fecha anterior al último aplicado se guarda en el historial pero <strong>no cambia el estado visible</strong> del envío: la línea de tiempo lo marca como reporte rezagado.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">GET /api/shipments/{trackingNumber}/actions — rol OPERADOR</h4>
+    <p style="margin:0 0 14px">Movimientos que el envío admite ahora (<code>actions</code>: <code>type</code>, <code>label</code>, <code>expectedCity</code>, <code>centers</code>, <code>route</code>), su <code>currentStatus</code> y su <code>currentLocation</code>. Alimenta el formulario de eventos para que el operador elija de una lista corta y correcta.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">GET /api/tracking/{trackingNumber} — público</h4>
+    <p style="margin:0 0 14px"><code>status</code>, <code>senderName</code>, <code>originCity</code>, <code>recipientName</code>, <code>destinationCity</code>, <code>registeredAt</code>, <code>lastMovementPoint</code>, <code>lastMovementAt</code> y, solo cuando está entregado, <code>recipientAddress</code>. Guía inexistente devuelve 404, que la UI presenta como un estado amable y explícito, no como error crudo: "No encontramos ningún envío con ese número. Verifica que esté bien escrito", con el código de respuesta a la vista para diagnóstico.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">GET /api/shipments/{trackingNumber}/events — público</h4>
+    <p style="margin:0 0 14px">HU-04. Responde <code>{ trackingNumber, totalMovements, message, movements }</code>, con los movimientos ordenados por fecha real de ocurrencia (<code>type</code>, <code>resultingStatus</code>, <code>point</code>, <code>cityName</code>, <code>notes</code>, <code>delivererName</code>, <code>occurredAt</code>). Sin movimientos, <code>message</code> lo informa. Se renderiza como línea de tiempo vertical con ícono por tipo de evento.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">POST /api/auth/login — público</h4>
+    <p style="margin:0 0 14px">Un solo formulario, sin selector de rol: el backend decide según las credenciales y el admin siempre incluye los permisos de operador ("ADMIN OPERADOR"). Body <code>{ username, password }</code>; responde <code>token</code>, <code>type</code>, <code>roles</code> y <code>expiresInSeconds</code>. El JWT se guarda y se envía como <code>Authorization: Bearer {token}</code> solo en las peticiones protegidas. Credenciales incorrectas devuelven 401. Si el entorno no tiene credenciales configuradas devuelve 503 y se muestra el mensaje específico "No hay credenciales configuradas en este entorno", no un error genérico de usuario o clave. El claim de roles decide qué se muestra en la UI de operador, nunca antes del login.</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">GET /api/auth/sesion y POST /api/auth/logout — con token</h4>
+    <p style="margin:0 0 14px">HU-08. Al abrir la página, si hay un token guardado se valida con <code>GET /api/auth/sesion</code>; si responde 401 (sesión cerrada o inactiva más de 30 minutos) se descarta sin ruido. Cerrar sesión llama a <code>POST /api/auth/logout</code>, que invalida el token en el servidor, y además borra el token y los datos de operación de la pantalla. Cualquier 401 en una petición con token lleva al login con el aviso "Sesión terminada".</p>
+
+    <h4 style="margin:0 0 4px;font-size:13pt">POST /api/admin/rebuild-projections — rol ADMIN</h4>
+    <p style="margin:0 0 6px">Sin body. Devuelve <code>shipmentsRepublished</code> y <code>eventsRepublished</code>. Pantalla simple, visible solo con rol ADMIN.</p>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">7. Estados diseñados</h2>
+    <p>Cada pantalla cubre el camino completo, no solo el feliz: cargando, vacío (envío sin movimientos), error de red con reintento, 404 explícito, validación de formato en cliente antes de llamar al backend, 400 con el <code>detail</code> del backend y su lista de campos faltantes, 401/403 con invitación a iniciar sesión, 503 sin credenciales, y éxito 202 con aviso de procesamiento asíncrono.</p>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">8. Pendientes</h2>
+    <table class="table" style="font-size:10.5pt">
+      <thead><tr><th style="width:34%">Pendiente</th><th style="width:20%">Requiere backend</th><th>Nota</th></tr></thead>
+      <tbody>
+        <tr><td>Adaptación a móvil de los formularios</td><td>No</td><td>Registrar envío y registrar evento están en dos columnas fijas.</td></tr>
+        <tr><td>Barra de progreso de estados</td><td>No</td><td>Los cinco estados como pasos, antes de la línea de tiempo.</td></tr>
+        <tr><td>URL por guía y rastreo reciente</td><td>No</td><td>Enlace compartible y últimas consultas del navegador.</td></tr>
+        <tr><td>Reportar movimiento desde el envío</td><td>No</td><td>Evita reescribir la guía a mano.</td></tr>
+        <tr><td>Confirmación previa al envío de un evento</td><td>No</td><td>No hay edición ni borrado: conviene revisar antes.</td></tr>
+        <tr><td>Accesibilidad del autocompletado</td><td>No</td><td>Flechas, Enter y roles ARIA.</td></tr>
+        <tr><td>Fecha estimada de entrega</td><td>Sí</td><td>Es el dato que más busca el cliente.</td></tr>
+        <tr><td>Reporte de volumen (HU-07)</td><td>No</td><td>El backend ya expone <code>GET /api/reports/shipment-volume?from=&amp;to=</code> (rol OPERADOR); falta la pantalla.</td></tr>
+        <tr><td>Impresión del rótulo de guía</td><td>Sí</td><td>Requiere los datos completos del envío tras el 202.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 style="font-size:19pt;margin:30px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(29,31,32,.2)">9. Implementación prevista</h2>
+    <p style="margin-bottom:0">Next.js 16 con App Router, React 19 y TypeScript; Tailwind CSS v4 con shadcn/ui estilo base-nova; primitivas Radix vía @base-ui/react, lucide-react para íconos y axios para HTTP. Faltan por crear los componentes label, textarea, table, dialog, tabs, notificación y el combobox de autocompletado, que se arma con popover más input y lista filtrada. Este prototipo es la referencia visual y de comportamiento para esa implementación.</p>
+  </div>
+</doc-page>
+
+</x-dc>
+</body>
+</html>
