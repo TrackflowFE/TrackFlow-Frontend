@@ -212,6 +212,7 @@ a:hover { color: #f4711a; }
             <button onClick="{{ goNuevo }}" style="text-align:left;padding:11px 14px;background:none;border:0;cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar envío</button>
             <button onClick="{{ goEvento }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar evento</button>
             <button onClick="{{ goReporte }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Volumen de envíos</button>
+                        <button onClick="{{ goRetrasados }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Envíos retrasados</button>
           </div>
         </sc-if>
       </div>
@@ -977,6 +978,112 @@ a:hover { color: #f4711a; }
         </sc-if>
       </section>
     </sc-if>
+    <!-- ══ REPORTE DE ENVÍOS RETRASADOS (HU-06) ══ -->
+    <sc-if value="{{ isRetrasados }}" hint-placeholder-val="{{ false }}">
+      <section style="max-width:1080px">
+        <div class="tf-event-hero" style="position:relative;margin:-44px -28px 30px;padding:34px 42px 32px;background-image:url('assets/images/fondo-operaciones.png');background-size:cover;background-position:right center;background-repeat:no-repeat;border-bottom:1px solid rgba(29,31,32,.12);overflow:hidden">
+          <div style="position:relative;z-index:1;max-width:680px">
+            <div class="tf-event-kicker" style="margin-bottom:9px">Operador · HU-06</div>
+            <h1 style="margin:0 0 8px;font-size:48px;line-height:1.02;letter-spacing:0">Envíos retrasados</h1>
+            <p style="color:rgba(29,31,32,.72);max-width:620px;margin:0;font-size:17px;line-height:1.55">Los envíos que llevan detenidos más tiempo del esperado mientras siguen en la red, del más al menos atrasado, para intervenir antes de que el cliente reclame.</p>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+          <span class="tf-muted-note" style="margin:0">El tiempo se mide desde el último movimiento del envío, o desde su registro si aún no tiene ninguno.</span>
+          <button type="button" onClick="{{ retActualizar }}" class="btn btn-primary" disabled="{{ retLoading }}" style="min-height:44px;padding:0 26px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff;border-radius:4px" style-hover="background:#d9600f;border-color:#d9600f">{{ retBoton }}</button>
+        </div>
+
+        <sc-if value="{{ retError }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:14px;align-items:flex-start;margin-top:20px;padding:16px 18px;border-left:3px solid #c0392b;background:#fbeeee">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#7a1f1f;margin-bottom:3px">{{ retErrorTitle }}</div>
+              <p style="margin:0;font-size:13px;color:#7a1f1f;opacity:.85">{{ retError }}</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ retLoading }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="margin-top:22px;padding:34px;display:flex;align-items:center;gap:14px;color:rgba(29,31,32,.65)">
+            <span style="width:20px;height:20px;border:2px solid #cfe0f3;border-top-color:#1b4b8f;border-radius:50%;animation:tfspin .8s linear infinite;flex:none"></span>
+            Buscando envíos retrasados…
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ retHayResultado }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin:28px 0 14px">
+            <div>
+              <div class="tf-section-kicker">Resultado</div>
+              <h2 style="margin:0;font-size:26px;letter-spacing:0">Situación actual de la red</h2>
+            </div>
+            <span style="font-size:13px;color:rgba(29,31,32,.6)">Corte: {{ retCorte }}</span>
+          </div>
+
+          <div class="tf-kpi-grid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+            <div class="tf-panel tf-kpi" style="border-top:3px solid #1b4b8f">
+              <div class="tf-kpi-label">Envíos retrasados</div>
+              <div class="tf-kpi-value">{{ retTotal }}</div>
+              <div class="tf-kpi-sub">Detenidos más de lo esperado.</div>
+            </div>
+            <div class="tf-panel tf-kpi" style="border-top:3px solid #c0392b">
+              <div class="tf-kpi-label">Críticos</div>
+              <div class="tf-kpi-value" style="color:#7a1f1f">{{ retCriticos }}</div>
+              <div class="tf-kpi-sub">Duplican el tiempo esperado o más.</div>
+            </div>
+            <div class="tf-panel tf-kpi" style="border-top:3px solid #f4711a">
+              <div class="tf-kpi-label">Moderados</div>
+              <div class="tf-kpi-value" style="color:#7a3606">{{ retModerados }}</div>
+              <div class="tf-kpi-sub">Superan el tiempo en 50 % o más.</div>
+            </div>
+            <div class="tf-panel tf-kpi" style="border-top:3px solid #d4a017">
+              <div class="tf-kpi-label">Leves</div>
+              <div class="tf-kpi-value" style="color:#7a5b00">{{ retLeves }}</div>
+              <div class="tf-kpi-sub">Recién pasados del límite.</div>
+            </div>
+          </div>
+
+          <sc-if value="{{ retVacio }}" hint-placeholder-val="{{ false }}">
+            <div class="tf-panel" style="margin-top:18px;padding:40px 28px;text-align:center">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1b4b8f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="m3 8 9 5 9-5"></path><path d="M12 13v8"></path></svg>
+              <div style="font-family:var(--font-heading);font-size:20px;margin:10px 0 4px">{{ retMensaje }}</div>
+              <p style="margin:0;font-size:14px;color:rgba(29,31,32,.6)">Todos los envíos en la red están dentro del tiempo esperado.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ retConFilas }}" hint-placeholder-val="{{ false }}">
+            <div class="tf-panel" style="margin-top:18px;padding:22px 12px 8px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 12px 14px">
+                <h3 style="margin:0;font-size:19px;letter-spacing:0">Del más al menos atrasado</h3>
+                <span class="tf-muted-note">{{ retTotal }} envíos</span>
+              </div>
+              <table class="tf-rep-table">
+                <thead>
+                  <tr><th>Guía</th><th>Estado</th><th>Punto actual</th><th class="tf-rep-col-ciudad">Destino</th><th class="tf-rep-num">Detenido</th><th>Severidad</th></tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ retFilas }}" as="f" hint-placeholder-count="4">
+                    <tr>
+                      <td style="font-family:var(--font-heading);font-weight:600">{{ f.guia }}</td>
+                      <td>{{ f.estado }}</td>
+                      <td style="color:rgba(29,31,32,.8)">{{ f.punto }}</td>
+                      <td class="tf-rep-col-ciudad" style="color:rgba(29,31,32,.7)">{{ f.destino }}</td>
+                      <td class="tf-rep-num">
+                        <div style="font-weight:600">{{ f.horas }}</div>
+                        <div style="font-size:12px;color:rgba(29,31,32,.6)">{{ f.exceso }} sobre el límite</div>
+                      </td>
+                      <td><span style="{{ f.sevStyle }}">{{ f.sevLabel }}</span></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+
+          <p class="tf-muted-note" style="margin:14px 2px 0">El tiempo esperado depende del estado del envío. Un envío que nunca ha tenido un movimiento se mide desde su registro y aparece como "Sin movimientos".</p>
+        </sc-if>
+      </section>
+    </sc-if>
 
     <!-- ══ ADMIN ══ -->
     <sc-if value="{{ isAdminScreen }}" hint-placeholder-val="{{ false }}">
@@ -1082,7 +1189,7 @@ class Component extends DCLogic {
       useFecha: false, evSubmitting: false, evError: '', evErrorTitle: '', evOk: null, evTnDefault: '',
       loginSubmitting: false, loginError: '', loginErrorTitle: '',
       adminLoading: false, adminResult: null, adminError: '',
-      repDesde: '', repHasta: '', repPreset: '', repLoading: false, repData: null, repError: '', repErrorTitle: ''
+      repDesde: '', repHasta: '', repPreset: '', repLoading: false, repData: null, repError: '', repErrorTitle: '', retData: null, retLoading: false, retError: '', retErrorTitle: ''
     };
   }
 
@@ -1180,6 +1287,25 @@ class Component extends DCLogic {
     // Al entrar se muestra la última semana, que es la vista más útil para dimensionar.
     if (!this.state.repData && !this.state.repLoading) this.aplicarPreset('semana', true);
   };
+    goRetrasados = () => {
+    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
+    this.setState({ route: 'retrasados', opsOpen: false });
+    // El reporte siempre mide "ahora": se consulta cada vez que se entra.
+    this.cargarRetrasados();
+  };
+
+  async cargarRetrasados() {
+    this.setState({ retLoading: true, retError: '', retErrorTitle: '' });
+    try {
+      const r = await this.api('/api/reports/delayed-shipments', { timeout: 45000 });
+      if (r.status === 401) return this.setState({ retLoading: false });
+      if (r.status === 403) return this.setState({ retLoading: false, retErrorTitle: 'Permiso insuficiente', retError: 'El reporte requiere rol OPERADOR.' });
+      if (!r.ok) return this.setState({ retLoading: false, retData: null, retErrorTitle: (r.data && r.data.title) || ('Error ' + r.status), retError: (r.data && r.data.detail) || 'No se pudo generar el reporte.' });
+      this.setState({ retLoading: false, retData: r.data });
+    } catch (err) {
+      this.setState({ retLoading: false, retErrorTitle: 'Sin conexión', retError: 'No hay conexión con ' + this.base + ' (' + err.message + ').' });
+    }
+  }
   // HU-08: cerrar sesión la invalida en el servidor (el token deja de servir aunque no
   // haya vencido) y además se borra del navegador.
   logout = async () => {
@@ -1487,7 +1613,45 @@ class Component extends DCLogic {
       })
     };
   }
-
+  vistaRetrasados(s) {
+    const d = s.retData;
+    const num = (n) => Number(n || 0).toLocaleString('es-CO');
+    const lista = d && Array.isArray(d.shipments) ? d.shipments : [];
+    const cuenta = (sev) => lista.filter(e => e.severity === sev).length;
+    const estados = { REGISTERED: 'Registrado', AT_DISTRIBUTION_CENTER: 'En centro de distribución', IN_TRANSIT: 'En tránsito', OUT_FOR_DELIVERY: 'En reparto' };
+    const sev = {
+      LOW: { label: 'Leve', bg: '#fff4d6', color: '#7a5b00' },
+      MODERATE: { label: 'Moderada', bg: '#fdeee1', color: '#7a3606' },
+      CRITICAL: { label: 'Crítica', bg: '#fbeeee', color: '#7a1f1f' }
+    };
+    return {
+      isRetrasados: s.route === 'retrasados',
+      goRetrasados: this.goRetrasados,
+      retActualizar: () => this.cargarRetrasados(),
+      retLoading: s.retLoading, retBoton: s.retLoading ? 'Actualizando…' : 'Actualizar',
+      retError: s.retError, retErrorTitle: s.retErrorTitle,
+      retHayResultado: !!d && !s.retLoading,
+      retCorte: d ? this.fmt(d.cutoff) : '',
+      retTotal: num(d && d.totalDelayed),
+      retCriticos: num(cuenta('CRITICAL')), retModerados: num(cuenta('MODERATE')), retLeves: num(cuenta('LOW')),
+      retVacio: !!d && lista.length === 0,
+      retMensaje: (d && d.message) || 'No hay envíos retrasados en este momento',
+      retConFilas: lista.length > 0,
+      retFilas: lista.map(e => {
+        const v = sev[e.severity] || sev.LOW;
+        return {
+          guia: e.trackingNumber,
+          estado: estados[e.status] || e.status,
+          punto: e.lastPoint || 'Sin movimientos',
+          destino: e.destinationCity || '—',
+          horas: num(e.hoursStopped) + ' h de ' + num(e.hoursExpected) + ' esperadas',
+          exceso: '+' + num(e.hoursOver) + ' h',
+          sevLabel: v.label,
+          sevStyle: { display: 'inline-block', padding: '3px 10px', borderRadius: '3px', fontSize: '12px', fontWeight: '600', letterSpacing: '.04em', background: v.bg, color: v.color }
+        };
+      })
+    };
+  }
   rebuild = async () => {
     this.setState({ adminLoading: true, adminError: '', adminResult: null });
     try {
@@ -1690,6 +1854,7 @@ class Component extends DCLogic {
       : s.createdEstado === 'PROCESANDO' ? 'Procesando…' : 'Encolado';
     return {
       ...this.vistaReporte(s),
+      ...this.vistaRetrasados(s),
       base: this.base,
       isHome: s.route === 'home', notHome: s.route !== 'home',
       isInterior: s.route !== 'home' && s.route !== 'login',
