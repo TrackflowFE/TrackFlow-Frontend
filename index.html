@@ -213,6 +213,7 @@ a:hover { color: #f4711a; }
             <button onClick="{{ goEvento }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar evento</button>
             <button onClick="{{ goReporte }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Volumen de envíos</button>
                         <button onClick="{{ goRetrasados }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Envíos retrasados</button>
+            <button onClick="{{ goTiempos }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Tiempos de tránsito</button>
           </div>
         </sc-if>
       </div>
@@ -1085,6 +1086,133 @@ a:hover { color: #f4711a; }
       </section>
     </sc-if>
 
+    <!-- ══ REPORTE DE TIEMPOS DE TRÁNSITO (HU-05) ══ -->
+    <sc-if value="{{ isTiempos }}" hint-placeholder-val="{{ false }}">
+      <section style="max-width:1080px">
+        <div class="tf-event-hero" style="position:relative;margin:-44px -28px 30px;padding:34px 42px 32px;background-image:url('assets/images/fondo-operaciones.png');background-size:cover;background-position:right center;background-repeat:no-repeat;border-bottom:1px solid rgba(29,31,32,.12);overflow:hidden">
+          <div style="position:relative;z-index:1;max-width:680px">
+            <div class="tf-event-kicker" style="margin-bottom:9px">Supervisor</div>
+            <h1 style="margin:0 0 8px;font-size:48px;line-height:1.02;letter-spacing:0">Tiempos de tránsito</h1>
+            <p style="color:rgba(29,31,32,.72);max-width:620px;margin:0;font-size:17px;line-height:1.55">Cuánto tarda un envío entregado en recorrer la red y en qué tramos se pierde el tiempo, para ajustar las rutas con datos.</p>
+          </div>
+        </div>
+
+        <form onSubmit="{{ consultarTiempos }}" noValidate="{{ true }}">
+          <div class="tf-panel" style="padding:22px 24px;display:grid;gap:16px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+              <span class="tf-section-kicker" style="margin:0 8px 0 0">Periodo de entrega</span>
+              <button type="button" onClick="{{ tieHoy }}" class="btn" style="{{ tiePresetHoy }}">Hoy</button>
+              <button type="button" onClick="{{ tieSemana }}" class="btn" style="{{ tiePresetSemana }}">Últimos 7 días</button>
+              <button type="button" onClick="{{ tieMes }}" class="btn" style="{{ tiePresetMes }}">Este mes</button>
+            </div>
+            <div class="tf-rep-filtros" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end">
+              <div class="field" style="margin:0"><label>Desde</label>
+                <input class="input" type="date" value="{{ tieDesde }}" max="{{ tieHoyIso }}" onChange="{{ onTieDesde }}">
+              </div>
+              <div class="field" style="margin:0"><label>Hasta (inclusive)</label>
+                <input class="input" type="date" value="{{ tieHasta }}" max="{{ tieHoyIso }}" onChange="{{ onTieHasta }}">
+              </div>
+              <button type="submit" class="btn btn-primary" disabled="{{ tieLoading }}" style="min-height:44px;padding:0 26px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff;border-radius:4px" style-hover="background:#d9600f;border-color:#d9600f">{{ tieBoton }}</button>
+            </div>
+            <div class="tf-muted-note">Solo cuentan los envíos entregados dentro del periodo; los que siguen en tránsito no se incluyen. Las fechas se interpretan en hora de Colombia y ambos días cuentan.</div>
+          </div>
+        </form>
+
+        <sc-if value="{{ tieError }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:14px;align-items:flex-start;margin-top:20px;padding:16px 18px;border-left:3px solid #c0392b;background:#fbeeee">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#7a1f1f;margin-bottom:3px">{{ tieErrorTitle }}</div>
+              <p style="margin:0;font-size:13px;color:#7a1f1f;opacity:.85">{{ tieError }}</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tieLoading }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="margin-top:22px;padding:34px;display:flex;align-items:center;gap:14px;color:rgba(29,31,32,.65)">
+            <span style="width:20px;height:20px;border:2px solid #cfe0f3;border-top-color:#1b4b8f;border-radius:50%;animation:tfspin .8s linear infinite;flex:none"></span>
+            Calculando los tiempos de tránsito…
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tieHayResultado }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin:28px 0 14px">
+            <div>
+              <div class="tf-section-kicker">Resultado</div>
+              <h2 style="margin:0;font-size:26px;letter-spacing:0">{{ tiePeriodo }}</h2>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(29,31,32,.6)">
+              <sc-if value="{{ tieEnCurso }}" hint-placeholder-val="{{ false }}">
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:3px;background:#fdeee1;color:#7a3606;font-size:12px;letter-spacing:.04em"><span style="width:7px;height:7px;border-radius:50%;background:#f4711a;animation:tfpulse 1.6s ease-in-out infinite"></span>En curso</span>
+              </sc-if>
+              <span>Corte: {{ tieCorte }}</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ tieVacio }}" hint-placeholder-val="{{ false }}">
+            <div class="tf-panel" style="padding:40px 28px;text-align:center">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1b4b8f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"></path><path d="m3 8 9 5 9-5"></path><path d="M12 13v8"></path></svg>
+              <div style="font-family:var(--font-heading);font-size:20px;margin:10px 0 4px">{{ tieMensaje }}</div>
+              <p style="margin:0;font-size:14px;color:rgba(29,31,32,.6)">Prueba con un periodo más amplio.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tieConDatos }}" hint-placeholder-val="{{ false }}">
+            <div class="tf-kpi-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+              <div class="tf-panel tf-kpi" style="border-top:3px solid #2f7d4f">
+                <div class="tf-kpi-label">Envíos entregados</div>
+                <div class="tf-kpi-value" style="color:#1c5130">{{ tieEntregados }}</div>
+                <div class="tf-kpi-sub">Los únicos que entran en los promedios.</div>
+              </div>
+              <div class="tf-panel tf-kpi" style="border-top:3px solid #1b4b8f">
+                <div class="tf-kpi-label">Tiempo promedio total</div>
+                <div class="tf-kpi-value">{{ tieTotal }}</div>
+                <div class="tf-kpi-sub">Desde que el envío entra a la red hasta su entrega.</div>
+              </div>
+              <div class="tf-panel tf-kpi" style="border-top:3px solid #f4711a">
+                <div class="tf-kpi-label">Tramo más lento</div>
+                <div class="tf-kpi-value" style="color:#7a3606;font-size:22px;line-height:1.2">{{ tieMasLento }}</div>
+                <div class="tf-kpi-sub">{{ tieMasLentoTiempo }}</div>
+              </div>
+            </div>
+
+            <div class="tf-panel" style="margin-top:18px;padding:22px 12px 8px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 12px 14px">
+                <h3 style="margin:0;font-size:19px;letter-spacing:0">Promedio por tramo</h3>
+                <span class="tf-muted-note">En orden de recorrido</span>
+              </div>
+              <table class="tf-rep-table">
+                <thead>
+                  <tr><th>Tramo</th><th class="tf-rep-col-ciudad">Entre los hitos</th><th class="tf-rep-num">Promedio</th><th class="tf-rep-num">Envíos medidos</th><th style="width:26%">Peso en el recorrido</th></tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ tieFilas }}" as="f" hint-placeholder-count="4">
+                    <tr>
+                      <td>
+                        <div style="font-weight:600">{{ f.nombre }}</div>
+                        <sc-if value="{{ f.masLento }}" hint-placeholder-val="{{ false }}"><span class="tf-rep-tag">Mayor demora</span></sc-if>
+                      </td>
+                      <td class="tf-rep-col-ciudad" style="color:rgba(29,31,32,.7);font-size:13px">{{ f.hitos }}</td>
+                      <td class="tf-rep-num" style="font-family:var(--font-heading);font-size:18px">{{ f.promedio }}</td>
+                      <td class="tf-rep-num" style="color:rgba(29,31,32,.7)">{{ f.envios }}</td>
+                      <td>
+                        <div style="display:flex;align-items:center;gap:10px">
+                          <div class="tf-rep-bar-track" style="flex:1"><div style="{{ f.barra }}"></div></div>
+                          <span class="tf-rep-num" style="font-size:13px;color:rgba(29,31,32,.65);min-width:42px">{{ f.pct }}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="tf-muted-note" style="margin:14px 2px 0">Cada tramo es el lapso entre dos hitos consecutivos del recorrido. Un tramo solo promedia los envíos que tienen ambos hitos registrados, por eso "Envíos medidos" puede ser menor que el total entregado. El peso es la parte del tiempo de los tramos que corresponde a cada uno.</p>
+          </sc-if>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <!-- ══ ADMIN ══ -->
     <sc-if value="{{ isAdminScreen }}" hint-placeholder-val="{{ false }}">
       <section style="max-width:640px">
@@ -1189,7 +1317,8 @@ class Component extends DCLogic {
       useFecha: false, evSubmitting: false, evError: '', evErrorTitle: '', evOk: null, evTnDefault: '',
       loginSubmitting: false, loginError: '', loginErrorTitle: '',
       adminLoading: false, adminResult: null, adminError: '',
-      repDesde: '', repHasta: '', repPreset: '', repLoading: false, repData: null, repError: '', repErrorTitle: '', retData: null, retLoading: false, retError: '', retErrorTitle: ''
+      repDesde: '', repHasta: '', repPreset: '', repLoading: false, repData: null, repError: '', repErrorTitle: '', retData: null, retLoading: false, retError: '', retErrorTitle: '',
+      tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: ''
     };
   }
 
@@ -1218,7 +1347,7 @@ class Component extends DCLogic {
     // quedar nada de la operación visible (ni volviendo con el botón atrás).
     this.setState({ token: null, roles: '', usuario: '', created: null, evCtx: null, acciones: [], ubicacionActual: null,
       tipoSel: '', centroId: null, evOk: null, evClave: null, adminResult: null, opsOpen: false, userOpen: false,
-      repData: null, repError: '' });
+      repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '' });
   }
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
@@ -1292,6 +1421,13 @@ class Component extends DCLogic {
     this.setState({ route: 'retrasados', opsOpen: false });
     // El reporte siempre mide "ahora": se consulta cada vez que se entra.
     this.cargarRetrasados();
+  };
+
+  goTiempos = () => {
+    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
+    this.setState({ route: 'tiempos', opsOpen: false });
+    // Al entrar se muestra la última semana, igual que en el reporte de volumen.
+    if (!this.state.tieData && !this.state.tieLoading) this.aplicarPresetTiempos('semana', true);
   };
 
   async cargarRetrasados() {
@@ -1652,6 +1788,87 @@ class Component extends DCLogic {
       })
     };
   }
+
+  // ── reporte de tiempos de tránsito (HU-05) ──
+  aplicarPresetTiempos(preset, consultar) {
+    const hoy = this.hoyColombia();
+    const desde = preset === 'hoy' ? hoy : preset === 'semana' ? this.sumarDias(hoy, -6) : hoy.slice(0, 8) + '01';
+    this.setState({ tieDesde: desde, tieHasta: hoy, tiePreset: preset, tieError: '' }, () => {
+      if (consultar) this.cargarTiempos();
+    });
+  }
+  onTieDesde = (e) => this.setState({ tieDesde: e.target.value, tiePreset: '', tieError: '' });
+  onTieHasta = (e) => this.setState({ tieHasta: e.target.value, tiePreset: '', tieError: '' });
+  consultarTiempos = (e) => { if (e) e.preventDefault(); this.cargarTiempos(); };
+
+  async cargarTiempos() {
+    const { tieDesde, tieHasta } = this.state;
+    const hoy = this.hoyColombia();
+    if (!tieDesde || !tieHasta) return this.setState({ tieErrorTitle: 'Periodo incompleto', tieError: 'Indica la fecha inicial y la final del periodo.' });
+    if (tieHasta < tieDesde) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: 'La fecha final no puede ser anterior a la inicial.' });
+    if (tieDesde > hoy) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: 'El periodo no puede empezar en el futuro.' });
+    this.setState({ tieLoading: true, tieError: '', tieErrorTitle: '' });
+    try {
+      const r = await this.api('/api/reports/transit-times?from=' + tieDesde + '&to=' + tieHasta, { timeout: 45000 });
+      if (r.status === 401) return this.setState({ tieLoading: false });
+      if (r.status === 403) return this.setState({ tieLoading: false, tieErrorTitle: 'Permiso insuficiente', tieError: 'El reporte requiere rol OPERADOR.' });
+      if (!r.ok) return this.setState({ tieLoading: false, tieData: null, tieErrorTitle: (r.data && r.data.title) || ('Error ' + r.status), tieError: (r.data && r.data.detail) || 'No se pudo generar el reporte.' });
+      this.setState({ tieLoading: false, tieData: r.data });
+    } catch (err) {
+      this.setState({ tieLoading: false, tieErrorTitle: 'Sin conexión', tieError: 'No hay conexión con ' + this.base + ' (' + err.message + ').' });
+    }
+  }
+
+  vistaTiempos(s) {
+    const d = s.tieData;
+    const num = (n) => Number(n || 0).toLocaleString('es-CO');
+    const tramos = d && Array.isArray(d.segments) ? d.segments : [];
+    const segs = (t) => (t.average ? Number(t.average.seconds || 0) : 0);
+    const sumaTramos = tramos.reduce((acc, t) => acc + segs(t), 0);
+    const maxSeg = tramos.reduce((m, t) => Math.max(m, segs(t)), 0);
+    const lento = maxSeg > 0 ? tramos.find(t => segs(t) === maxSeg) : null;
+    const hayDatos = !!d && Number(d.deliveredShipments || 0) > 0;
+    const preset = (nombre) => s.tiePreset === nombre
+      ? { padding: '7px 14px', fontSize: '13px', background: '#1b4b8f', borderColor: '#1b4b8f', color: '#fff', borderRadius: '3px' }
+      : { padding: '7px 14px', fontSize: '13px', background: '#fff', borderColor: 'rgba(29,31,32,.22)', color: '#1d1f20', borderRadius: '3px' };
+    return {
+      isTiempos: s.route === 'tiempos',
+      goTiempos: this.goTiempos,
+      tieHoy: () => this.aplicarPresetTiempos('hoy', true),
+      tieSemana: () => this.aplicarPresetTiempos('semana', true),
+      tieMes: () => this.aplicarPresetTiempos('mes', true),
+      tiePresetHoy: preset('hoy'), tiePresetSemana: preset('semana'), tiePresetMes: preset('mes'),
+      tieDesde: s.tieDesde, tieHasta: s.tieHasta, tieHoyIso: this.hoyColombia(),
+      onTieDesde: this.onTieDesde, onTieHasta: this.onTieHasta, consultarTiempos: this.consultarTiempos,
+      tieLoading: s.tieLoading, tieBoton: s.tieLoading ? 'Consultando…' : 'Consultar',
+      tieError: s.tieError, tieErrorTitle: s.tieErrorTitle,
+      tieHayResultado: !!d && !s.tieLoading,
+      tiePeriodo: d ? this.rangoTexto(d.from, d.to) : '',
+      tieEnCurso: !!(d && d.inProgress),
+      tieCorte: d ? this.fmt(d.cutoff) : '',
+      tieVacio: !!d && !hayDatos,
+      tieMensaje: (d && d.message) || 'No hay datos para el periodo consultado: no se entregó ningún envío',
+      tieConDatos: hayDatos,
+      tieEntregados: num(d && d.deliveredShipments),
+      tieTotal: d && d.averageTotal ? d.averageTotal.text : '—',
+      tieMasLento: lento ? lento.name : '—',
+      tieMasLentoTiempo: lento ? 'Promedio de ' + lento.average.text + '.' : 'Ningún tramo tiene mediciones.',
+      tieFilas: tramos.map(t => {
+        const v = segs(t);
+        const pct = sumaTramos ? (100 * v) / sumaTramos : 0;
+        const esLento = !!lento && t === lento;
+        return {
+          nombre: t.name,
+          hitos: (TIPOS[t.fromEvent] || t.fromEvent) + ' → ' + (TIPOS[t.toEvent] || t.toEvent),
+          promedio: t.average ? t.average.text : 'Sin datos',
+          envios: num(t.shipmentsMeasured),
+          masLento: esLento,
+          pct: t.average ? pct.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' %' : '—',
+          barra: { height: '100%', width: (t.average ? Math.max(pct, 2) : 0) + '%', background: esLento ? '#f4711a' : '#1b4b8f', borderRadius: '4px' }
+        };
+      })
+    };
+  }
   rebuild = async () => {
     this.setState({ adminLoading: true, adminError: '', adminResult: null });
     try {
@@ -1855,6 +2072,7 @@ class Component extends DCLogic {
     return {
       ...this.vistaReporte(s),
       ...this.vistaRetrasados(s),
+      ...this.vistaTiempos(s),
       base: this.base,
       isHome: s.route === 'home', notHome: s.route !== 'home',
       isInterior: s.route !== 'home' && s.route !== 'login',
