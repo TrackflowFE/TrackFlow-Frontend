@@ -442,6 +442,21 @@ a:hover { color: #f4711a; }
                 </div>
               </div>
 
+              <sc-if value="{{ hayRuta }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(29,31,32,.14)">
+                  <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(29,31,32,.5);margin-bottom:10px">Recorrido</div>
+                  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+                    <sc-for list="{{ rutaParadas }}" as="rp" hint-placeholder-count="3">
+                      <span style="display:inline-flex;align-items:center;gap:8px">
+                        <span style="{{ rp.chip }}">{{ rp.nombre }}<sc-if value="{{ rp.esEscala }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.8">escala</span></sc-if></span>
+                        <sc-if value="{{ rp.flecha }}" hint-placeholder-val="{{ true }}"><span style="color:rgba(29,31,32,.35)">→</span></sc-if>
+                      </span>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:13px;color:rgba(29,31,32,.65);margin-top:10px">{{ rutaResumen }}</div>
+                </div>
+              </sc-if>
+
               <dl style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:18px 0 0;font-size:13px">
                 <dt style="color:rgba(29,31,32,.5)">Registrado</dt><dd style="margin:0">{{ t_registrado }}</dd>
               </dl>
@@ -841,6 +856,8 @@ a:hover { color: #f4711a; }
               <dl style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px 16px;margin:24px 0 0;padding-top:18px;border-top:1px solid rgba(29,31,32,.12);font-size:14px">
                 <dt style="color:rgba(29,31,32,.48)">Estado</dt><dd style="margin:0;font-weight:600">{{ ctxEstado }}</dd>
                 <dt style="color:rgba(29,31,32,.48)">Último punto</dt><dd style="margin:0">{{ ctxUltimo }}</dd>
+                <dt style="color:rgba(29,31,32,.48)">Ruta restante</dt><dd style="margin:0">{{ ctxRuta }}</dd>
+                <dt style="color:rgba(29,31,32,.48)">Próxima parada</dt><dd style="margin:0">{{ ctxProxima }}</dd>
               </dl>
             </div>
           </sc-if>
@@ -1466,7 +1483,7 @@ class Component extends DCLogic {
   retry = () => this.fetchTracking(this.state.q);
 
   async fetchTracking(tn) {
-    this.setState({ loading: true, waking: false, notFound: false, netError: '', tracking: null, events: null, eventsLoading: true, diag: '' });
+    this.setState({ loading: true, waking: false, notFound: false, netError: '', tracking: null, events: null, eventsLoading: true, diag: '', ruta: null });
     let r = null, lastErr = null;
     for (let intento = 0; intento < 3; intento++) {
       try {
@@ -1490,6 +1507,11 @@ class Component extends DCLogic {
       const ev = await this.api('/api/shipments/' + tn + '/events', { timeout: 20000, publico: true });
       const movimientos = ev.ok && ev.data && Array.isArray(ev.data.movements) ? ev.data.movements : [];
       this.setState({ eventsLoading: false, events: movimientos, eventsMessage: ev.ok && ev.data ? (ev.data.message || '') : '' });
+      // Itinerario con las escalas. Si el backend todavía no lo expone, la vista sigue igual que antes.
+      try {
+        const rr = await this.api('/api/shipments/' + tn + '/route', { timeout: 20000, publico: true });
+        if (rr.ok && rr.data && Array.isArray(rr.data.stops)) this.setState({ ruta: rr.data });
+      } catch (errRuta) {}
     } catch (err) {
       this.setState({ loading: false, eventsLoading: false, netError: 'No hay conexión con ' + this.base + ' (' + err.message + ').' });
     }
@@ -1506,7 +1528,7 @@ class Component extends DCLogic {
     if (!text.trim()) return this.setState({ [which + 'Cities']: [] });
     this['_ct_' + which] = setTimeout(async () => {
       try {
-        const r = await this.api('/api/cities?q=' + encodeURIComponent(text.trim()), { timeout: 6000, publico: true });
+        const r = await this.api('/api/cities?q=' + encodeURIComponent(text.trim()) + '&onlyCovered=true', { timeout: 6000, publico: true });
         this.setState({ [which + 'Cities']: Array.isArray(r.data) ? r.data : [] });
       } catch (e) {
         this.setState({ [which + 'Cities']: [] });
@@ -1886,11 +1908,33 @@ class Component extends DCLogic {
     const base = String(nombre).split(' - ')[0].trim();
     return base.split(/\s+/).map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
   }
+  /** Un ingreso a centro que no es el primero es un transbordo en un hub. */
+  esTransbordo(e) {
+    if (e.type !== 'RECEIVED_AT_CENTER') return false;
+    const ts = new Date(e.occurredAt).getTime();
+    return (this.state.events || []).some(x => x.id !== e.id && x.type === 'RECEIVED_AT_CENTER'
+      && new Date(x.occurredAt).getTime() < ts);
+  }
+  /**
+   * Hacia dónde salió el camión en un despacho: lo que guardó el backend; para un despacho
+   * en curso sin ese dato, la próxima parada de la ruta; y si no hay nada, el destino final.
+   */
+  haciaDondeVa(e, t) {
+    const destinoId = t && t.destinationCityId;
+    if (e.nextStopCity) return { nombre: e.nextStopCity, escala: e.nextStopCityId != null && e.nextStopCityId !== destinoId };
+    const evs = this.state.events || [];
+    const ultimo = evs.reduce((m, x) => (!m || new Date(x.occurredAt) >= new Date(m.occurredAt) ? x : m), null);
+    const prox = this.state.ruta && this.state.ruta.nextStop;
+    if (ultimo && ultimo.id === e.id && prox) return { nombre: prox.name, escala: prox.id !== destinoId };
+    return { nombre: t && t.destinationCity, escala: false };
+  }
   evTitulo(e, t) {
     if (e.type === 'DISPATCHED') {
-      const d = this.ciudadCorta(t && t.destinationCity);
-      return d ? 'Despachado hacia ' + d : 'Despachado';
+      const hacia = this.haciaDondeVa(e, t);
+      const d = this.ciudadCorta(hacia.nombre);
+      return d ? 'Despachado hacia ' + d + (hacia.escala ? ' (escala)' : '') : 'Despachado';
     }
+    if (this.esTransbordo(e)) return 'Recibido en hub de transbordo';
     if (e.type === 'DELIVERED') return 'Entregado en dirección de destino';
     if (e.type === 'ARRIVED_AT_DESTINATION_CENTER') return 'Llegó al centro de destino';
     return TIPOS[e.type] || e.type;
@@ -1905,8 +1949,12 @@ class Component extends DCLogic {
   }
   evLinea2(e, t) {
     if (e.type === 'DISPATCHED') {
-      const desde = this.ciudadCorta(e.cityName), hasta = this.ciudadCorta(t && t.destinationCity);
+      const desde = this.ciudadCorta(e.cityName), hasta = this.ciudadCorta(this.haciaDondeVa(e, t).nombre);
       return desde && hasta ? desde + ' → ' + hasta : '';
+    }
+    if (this.esTransbordo(e)) {
+      const destino = this.ciudadCorta(t && t.destinationCity);
+      return 'Escala en ' + this.ciudadCorta(e.cityName) + (destino ? '; continúa hacia ' + destino + '.' : '.');
     }
     if (e.type === 'DELIVERED') return '';
     if (e.type === 'RECEIVED_AT_CENTER') return 'El paquete fue recibido en el centro.';
@@ -1967,11 +2015,12 @@ class Component extends DCLogic {
     if (!tn) return this.setState({ acciones: [], tipoSel: '', centroId: null });
     try {
       const r = await this.api('/api/shipments/' + tn + '/actions', { timeout: 15000 });
-      const estadoActual = r.ok && r.data ? r.data.currentStatus : null;
-      let acs = r.ok && Array.isArray(r.data && r.data.actions) ? r.data.actions : [];
-      if (estadoActual === 'IN_TRANSIT') acs = acs.filter(a => a.type !== 'RECEIVED_AT_CENTER');
+      // El backend ya ofrece solo los movimientos válidos según la ruta: tras un despacho
+      // hacia un hub, "Recibido en centro" es justo el que corresponde, así que no se filtra.
+      const acs = r.ok && Array.isArray(r.data && r.data.actions) ? r.data.actions : [];
       const ubic = r.ok && r.data ? r.data.currentLocation : null;
-      this.setState({ acciones: acs, ubicacionActual: ubic });
+      const rutaPlaneada = r.ok && r.data && Array.isArray(r.data.plannedRoute) ? r.data.plannedRoute : [];
+      this.setState({ acciones: acs, ubicacionActual: ubic, rutaPlaneada });
       this.seleccionarAccion(acs[0], ubic);
     } catch (err) { this.setState({ acciones: [], tipoSel: '', centroId: null }); }
   }
@@ -2124,7 +2173,46 @@ class Component extends DCLogic {
       ctxDestinatario: s.evCtx ? (s.evCtx.recipientName || 'sin nombre registrado') : '',
       ctxDestino: s.evCtx ? (s.evCtx.destinationCity || '—') : '',
       ctxEstado: s.evCtx ? (ESTADOS[s.evCtx.status] || ESTADOS.REGISTERED)[0] : '',
-      ctxUltimo: s.evCtx ? (s.evCtx.lastMovementPoint || 'sin movimientos') : '',
+      ctxUltimo: s.evCtx ? ((s.ubicacionActual && s.ubicacionActual.centerName
+        ? s.ubicacionActual.centerName + ' · ' + this.ciudadCorta(s.ubicacionActual.cityName)
+        : s.evCtx.lastMovementPoint) || 'sin movimientos') : '',
+      ctxRuta: (s.rutaPlaneada || []).length ? s.rutaPlaneada.map(c => this.ciudadCorta(c.name)).join(' → ') : '—',
+      ctxProxima: (() => {
+        const rp = s.rutaPlaneada || [];
+        if (!rp.length) return '—';
+        if (rp.length === 1) return 'En la ciudad de destino';
+        const escalas = rp.length - 2;
+        return this.ciudadCorta(rp[1].name) + (escalas > 0
+          ? ' (escala · ' + (escalas === 1 ? 'falta 1 escala' : 'faltan ' + escalas + ' escalas') + ')'
+          : ' (destino)');
+      })(),
+      hayRuta: !!(s.ruta && s.ruta.stops && s.ruta.stops.length > 1),
+      rutaParadas: (() => {
+        const stops = (s.ruta && s.ruta.stops) || [];
+        const base = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '13px', lineHeight: '1.3' };
+        const estilos = {
+          VISITED: { background: '#e9f0fa', color: '#1b4b8f', border: '1px solid #e9f0fa' },
+          CURRENT: { background: '#f4711a', color: '#fff', border: '1px solid #f4711a', fontWeight: 600 },
+          PENDING: { background: 'transparent', color: 'rgba(29,31,32,.7)', border: '1px dashed rgba(29,31,32,.35)' }
+        };
+        return stops.map((p, i) => ({
+          nombre: this.ciudadCorta(p.cityName), esEscala: p.type === 'STOPOVER',
+          chip: Object.assign({}, base, estilos[p.status] || estilos.PENDING),
+          flecha: i < stops.length - 1
+        }));
+      })(),
+      rutaResumen: (() => {
+        const r = s.ruta;
+        if (!r) return '';
+        if (r.currentStatus === 'DELIVERED') return 'Recorrido completo.';
+        if (!r.nextStop) return 'El paquete ya está en la ciudad de destino.';
+        const prox = this.ciudadCorta(r.nextStop.name);
+        if (r.pendingStopovers > 0) {
+          return 'Próxima escala: ' + prox + '. ' + (r.pendingStopovers === 1
+            ? 'Después sigue al destino.' : 'Le faltan ' + r.pendingStopovers + ' escalas antes del destino.');
+        }
+        return 'Próximo traslado: directo a ' + prox + ', su destino.';
+      })(),
 
       eventsLoading: s.eventsLoading, timeline,
       grupos: (() => {
