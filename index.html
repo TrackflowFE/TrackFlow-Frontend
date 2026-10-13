@@ -444,13 +444,31 @@ a:hover { color: #f4711a; }
 
               <sc-if value="{{ hayRuta }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(29,31,32,.14)">
-                  <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(29,31,32,.5);margin-bottom:10px">Recorrido</div>
-                  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+                  <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(29,31,32,.5);margin-bottom:12px">Recorrido planificado</div>
+                  <div style="display:grid;gap:4px">
                     <sc-for list="{{ rutaParadas }}" as="rp" hint-placeholder-count="3">
-                      <span style="display:inline-flex;align-items:center;gap:8px">
-                        <span style="{{ rp.chip }}">{{ rp.nombre }}<sc-if value="{{ rp.esEscala }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.8">escala</span></sc-if></span>
-                        <sc-if value="{{ rp.flecha }}" hint-placeholder-val="{{ true }}"><span style="color:rgba(29,31,32,.35)">→</span></sc-if>
-                      </span>
+                      <div>
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <span style="{{ rp.icono }}">
+                            <sc-if value="{{ rp.noEsDestino }}" hint-placeholder-val="{{ true }}">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-6 9 6v12"></path><path d="M7 21v-8h10v8"></path><path d="M7 16h10"></path></svg>
+                            </sc-if>
+                            <sc-if value="{{ rp.esDestino }}" hint-placeholder-val="{{ false }}">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            </sc-if>
+                          </span>
+                          <div style="flex:1;min-width:0">
+                            <div style="font-family:var(--font-heading);font-size:17px;letter-spacing:.02em;line-height:1.2">{{ rp.titulo }}</div>
+                            <div style="font-size:13px;color:rgba(29,31,32,.62)">{{ rp.rol }}</div>
+                          </div>
+                          <span style="{{ rp.badgeEstilo }}">{{ rp.badge }}</span>
+                        </div>
+                        <sc-if value="{{ rp.tramo }}" hint-placeholder-val="{{ true }}">
+                          <div style="display:flex;align-items:center;gap:12px;margin:6px 0;font-size:13px;color:rgba(29,31,32,.62)">
+                            <span style="width:32px;text-align:center;flex:none">↓</span>{{ rp.tramo }}
+                          </div>
+                        </sc-if>
+                      </div>
                     </sc-for>
                   </div>
                   <div style="font-size:13px;color:rgba(29,31,32,.65);margin-top:10px">{{ rutaResumen }}</div>
@@ -1646,7 +1664,9 @@ class Component extends DCLogic {
       if (r.status === 401) return this.setState({ evSubmitting: false });
       if (r.status === 403) return this.setState({ evSubmitting: false, evErrorTitle: 'Permiso insuficiente', evError: 'Esta operación requiere rol OPERADOR.' });
       if (!r.ok) return this.setState({ evSubmitting: false, evClave: null, evErrorTitle: (r.data && r.data.title) || ('Error ' + r.status), evError: (r.data && r.data.detail) || 'La solicitud fue rechazada.' });
-      this.setState({ evSubmitting: false, evOk: tn, evClave: null });
+      // La fecha manual vale solo para el movimiento que se acaba de registrar: si quedara
+      // marcada, el siguiente se reportaría con la misma hora sin que el operador lo note.
+      this.setState({ evSubmitting: false, evOk: tn, evClave: null, useFecha: false });
       setTimeout(async () => {
         try {
           const rt = await this.api('/api/tracking/' + tn, { timeout: 12000, publico: true });
@@ -1908,24 +1928,31 @@ class Component extends DCLogic {
     const base = String(nombre).split(' - ')[0].trim();
     return base.split(/\s+/).map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
   }
-  /** Un ingreso a centro que no es el primero es un transbordo en un hub. */
+  /**
+   * Un ingreso a centro que no es el primero es un transbordo en un hub. Se decide por la
+   * posición en el historial, que el backend entrega en orden: comparar horas fallaba
+   * cuando varios movimientos se reportaban con la misma hora.
+   */
   esTransbordo(e) {
     if (e.type !== 'RECEIVED_AT_CENTER') return false;
-    const ts = new Date(e.occurredAt).getTime();
-    return (this.state.events || []).some(x => x.id !== e.id && x.type === 'RECEIVED_AT_CENTER'
-      && new Date(x.occurredAt).getTime() < ts);
+    const evs = this.state.events || [];
+    const i = evs.findIndex(x => x.id === e.id);
+    return evs.slice(0, i).some(x => x.type === 'RECEIVED_AT_CENTER');
   }
   /**
-   * Hacia dónde salió el camión en un despacho: lo que guardó el backend; para un despacho
-   * en curso sin ese dato, la próxima parada de la ruta; y si no hay nada, el destino final.
+   * Hacia dónde salió el camión en un despacho. En orden: lo que guardó el backend; la
+   * ciudad del siguiente ingreso a un centro en el historial; para un despacho todavía en
+   * camino, la próxima parada de la ruta; y si no hay nada más, el destino final.
    */
   haciaDondeVa(e, t) {
     const destinoId = t && t.destinationCityId;
     if (e.nextStopCity) return { nombre: e.nextStopCity, escala: e.nextStopCityId != null && e.nextStopCityId !== destinoId };
     const evs = this.state.events || [];
-    const ultimo = evs.reduce((m, x) => (!m || new Date(x.occurredAt) >= new Date(m.occurredAt) ? x : m), null);
+    const i = evs.findIndex(x => x.id === e.id);
+    const ingreso = evs.slice(i + 1).find(x => (x.type === 'RECEIVED_AT_CENTER' || x.type === 'ARRIVED_AT_DESTINATION_CENTER') && x.cityName);
+    if (ingreso) return { nombre: ingreso.cityName, escala: ingreso.cityId != null && ingreso.cityId !== destinoId };
     const prox = this.state.ruta && this.state.ruta.nextStop;
-    if (ultimo && ultimo.id === e.id && prox) return { nombre: prox.name, escala: prox.id !== destinoId };
+    if (i === evs.length - 1 && prox) return { nombre: prox.name, escala: prox.id !== destinoId };
     return { nombre: t && t.destinationCity, escala: false };
   }
   evTitulo(e, t) {
@@ -2189,17 +2216,30 @@ class Component extends DCLogic {
       hayRuta: !!(s.ruta && s.ruta.stops && s.ruta.stops.length > 1),
       rutaParadas: (() => {
         const stops = (s.ruta && s.ruta.stops) || [];
-        const base = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', fontSize: '13px', lineHeight: '1.3' };
-        const estilos = {
-          VISITED: { background: '#e9f0fa', color: '#1b4b8f', border: '1px solid #e9f0fa' },
-          CURRENT: { background: '#f4711a', color: '#fff', border: '1px solid #f4711a', fontWeight: 600 },
-          PENDING: { background: 'transparent', color: 'rgba(29,31,32,.7)', border: '1px dashed rgba(29,31,32,.35)' }
+        const entregado = s.ruta && s.ruta.currentStatus === 'DELIVERED';
+        const ROL = { ORIGIN: 'Centro de origen', STOPOVER: 'Centro de tránsito', DESTINATION: 'Centro de destino y entrega' };
+        const badgeBase = { fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', flex: 'none' };
+        const BADGE = {
+          COMPLETADO: { texto: 'Completado', estilo: { background: '#e3f2e8', color: '#1c5130' } },
+          ENTREGADO: { texto: 'Entregado', estilo: { background: '#e3f2e8', color: '#1c5130' } },
+          ACTUAL: { texto: 'Aquí está el paquete', estilo: { background: '#fdeee1', color: '#7a3606' } },
+          PENDIENTE: { texto: 'Pendiente', estilo: { background: 'transparent', color: 'rgba(29,31,32,.6)', border: '1px dashed rgba(29,31,32,.3)' } }
         };
-        return stops.map((p, i) => ({
-          nombre: this.ciudadCorta(p.cityName), esEscala: p.type === 'STOPOVER',
-          chip: Object.assign({}, base, estilos[p.status] || estilos.PENDING),
-          flecha: i < stops.length - 1
-        }));
+        const COLOR = { VISITED: '#1b4b8f', CURRENT: '#f4711a', PENDING: 'rgba(29,31,32,.38)' };
+        return stops.map((p, i) => {
+          const b = p.type === 'DESTINATION' && entregado ? BADGE.ENTREGADO
+            : p.status === 'VISITED' ? BADGE.COMPLETADO
+            : p.status === 'CURRENT' ? BADGE.ACTUAL : BADGE.PENDIENTE;
+          const sig = stops[i + 1];
+          return {
+            titulo: (i + 1) + '. ' + this.ciudadCorta(p.cityName),
+            rol: ROL[p.type] || '',
+            esDestino: p.type === 'DESTINATION', noEsDestino: p.type !== 'DESTINATION',
+            icono: { color: COLOR[p.status] || COLOR.PENDING, display: 'grid', placeItems: 'center', width: '32px', flex: 'none' },
+            badge: b.texto, badgeEstilo: Object.assign({}, badgeBase, b.estilo),
+            tramo: sig ? 'Tramo ' + (i + 1) + ': ' + this.ciudadCorta(p.cityName) + ' → ' + this.ciudadCorta(sig.cityName) : ''
+          };
+        });
       })(),
       rutaResumen: (() => {
         const r = s.ruta;
