@@ -1102,11 +1102,19 @@ a:hover { color: #f4711a; }
                     <tr>
                       <td style="font-family:var(--font-heading);font-weight:600">{{ f.guia }}</td>
                       <td>{{ f.estado }}</td>
-                      <td style="color:rgba(29,31,32,.8)">{{ f.punto }}</td>
+                      <td style="color:rgba(29,31,32,.8)">
+                        <div>{{ f.punto }}</div>
+                        <sc-if value="{{ f.puntoSub }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size:12px;color:rgba(29,31,32,.6)">{{ f.puntoSub }}</div>
+                        </sc-if>
+                      </td>
                       <td class="tf-rep-col-ciudad" style="color:rgba(29,31,32,.7)">{{ f.destino }}</td>
                       <td class="tf-rep-num">
                         <div style="font-weight:600">{{ f.horas }}</div>
                         <div style="font-size:12px;color:rgba(29,31,32,.6)">{{ f.exceso }} sobre el límite</div>
+                        <sc-if value="{{ f.base }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size:12px;color:rgba(29,31,32,.5)">{{ f.base }}</div>
+                        </sc-if>
                       </td>
                       <td><span style="{{ f.sevStyle }}">{{ f.sevLabel }}</span></td>
                     </tr>
@@ -1116,7 +1124,7 @@ a:hover { color: #f4711a; }
             </div>
           </sc-if>
 
-          <p class="tf-muted-note" style="margin:14px 2px 0">El tiempo esperado depende del estado del envío. Un envío que nunca ha tenido un movimiento se mide desde su registro y aparece como "Sin movimientos".</p>
+          <p class="tf-muted-note" style="margin:14px 2px 0">El tiempo esperado depende del estado del envío. Si va en camino, es la duración de su tramo más un 25 % de tolerancia. Un envío que nunca ha tenido un movimiento se mide desde su registro y aparece como "Sin movimientos".</p>
         </sc-if>
       </section>
     </sc-if>
@@ -1820,7 +1828,10 @@ class Component extends DCLogic {
         return {
           guia: e.trackingNumber,
           estado: estados[e.status] || e.status,
-          punto: e.lastPoint || 'Sin movimientos',
+          // En camino: lo que importa es hacia dónde va; el centro de salida pasa a subtítulo.
+          punto: e.nextStop ? 'En camino a ' + this.ciudadCorta(e.nextStop) : (e.lastPoint || 'Sin movimientos'),
+          puntoSub: e.nextStop && e.lastPoint ? 'desde ' + e.lastPoint : '',
+          base: e.plannedLegHours ? 'Tramo de ' + num(e.plannedLegHours) + ' h + 25 %' : '',
           destino: e.destinationCity || '—',
           horas: num(e.hoursStopped) + ' h de ' + num(e.hoursExpected) + ' esperadas',
           exceso: '+' + num(e.hoursOver) + ' h',
