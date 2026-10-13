@@ -1490,7 +1490,9 @@ class Component extends DCLogic {
   logout = async () => {
     const token = this.state.token;
     this.olvidarSesion();
-    this.setState({ route: 'home' });
+    // HU-08: al cerrar sesión se vuelve a la pantalla de inicio de sesión, sin mensaje de
+    // error (no expiró nada, el usuario salió por su cuenta).
+    this.setState({ route: 'login', loginError: '', loginErrorTitle: '' });
     if (!token) return;
     try {
       await fetch(this.base + '/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
