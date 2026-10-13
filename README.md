@@ -14,6 +14,7 @@ Prototipo funcional del frontend de TrackFlow (Fábrica Escuela, UdeA 2026-2). C
 | Registrar envío | Operador | HU-01 |
 | Registrar evento logístico | Operador | HU-02 |
 | Volumen de envíos por periodo y punto de ingreso | Operador | HU-07 |
+| Tiempos de tránsito: promedio total y por tramo de los envíos entregados | Operador | HU-05 |
 | Ingresar / cerrar sesión | Público | HU-08 |
 | Reconstruir proyecciones | Administrador | — |
 
