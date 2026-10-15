@@ -55,6 +55,13 @@ destino en esta rama. El mismo token de API 1 se envía a los reportes protegido
 Antes de consultar un reporte protegido, el navegador valida y renueva la
 actividad mediante `/api/auth/sesion` en API 1; API 2 solo lee las sesiones.
 
+Las propiedades `shipmentsApiBaseUrl` y `logisticsApiBaseUrl` dirigen, respectivamente, a la
+API 1 (login, sesión, ciudades y registro de envíos) y a la API 3 (eventos, historial, ruta,
+acciones y centros). Igual que con reportes, mientras queden vacías esas llamadas siguen usando
+el monolito como respaldo. Las llamadas protegidas a la API 3 renuevan primero la actividad de
+la sesión en la API 1. La reconstrucción de proyecciones (pantalla de administrador) sigue yendo
+al monolito hasta que se adapte a las dos APIs.
+
 El plan gratuito de Render duerme el servicio: la primera consulta puede tardar cerca de un minuto, y la página lo indica mientras espera.
 
 ## Comportamiento destacado
