@@ -44,6 +44,17 @@ Luego abrir http://localhost:5173/.
 
 La URL del backend está en la propiedad `apiBaseUrl` de `index.html`; por defecto, `https://trackflow-mxll.onrender.com`. Para el backend local se cambia a `http://localhost:8080`.
 
+La propiedad `reportsApiBaseUrl` dirige exclusivamente `/api/tracking/**` y
+`/api/reports/**` a la API 2 de
+[trackflow-reports-api](https://github.com/TrackflowFE/trackflow-reports-api).
+Para pruebas locales se configura `http://localhost:8082`; en producción debe
+usarse la URL real asignada por Render después de verificar su despliegue.
+Mientras quede vacía, esas consultas siguen usando el monolito como respaldo.
+Login, sesiones, registro de envíos, eventos, historial y rutas no cambian de
+destino en esta rama. El mismo token de API 1 se envía a los reportes protegidos.
+Antes de consultar un reporte protegido, el navegador valida y renueva la
+actividad mediante `/api/auth/sesion` en API 1; API 2 solo lee las sesiones.
+
 El plan gratuito de Render duerme el servicio: la primera consulta puede tardar cerca de un minuto, y la página lo indica mientras espera.
 
 ## Comportamiento destacado

@@ -1283,7 +1283,7 @@ a:hover { color: #f4711a; }
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;},&quot;reportsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 2: Reportes&quot;}}">
 const ESTADOS = {
   REGISTERED: ['Registrado', '#e7e7ea', '#424244', 'rgba(29,31,32,.3)'],
   AT_DISTRIBUTION_CENTER: ['En centro de origen', '#e9f0fa', '#0e2646', '#1b4b8f'],
@@ -1395,11 +1395,23 @@ class Component extends DCLogic {
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
 
+  apiBaseFor(path) {
+    const reports = /^\/api\/(tracking|reports)(\/|\?|$)/.test(path);
+    // El monolito sigue como respaldo hasta verificar el despliegue de API 2.
+    return reports && this.props.reportsApiBaseUrl && this.props.reportsApiBaseUrl.trim()
+      ? this.props.reportsApiBaseUrl.trim().replace(/\/$/, '') : this.base;
+  }
+
   async api(path, opts) {
     opts = opts || {};
     const headers = { 'Accept': 'application/json' };
     if (opts.body) headers['Content-Type'] = 'application/json';
     const conToken = !!(this.state.token && !opts.publico);
+    // API 1 es duena de la actividad de sesion; la renovacion la hace el navegador.
+    if (conToken && /^\/api\/reports(\/|\?|$)/.test(path)) {
+      const session = await this.api('/api/auth/sesion', { timeout: opts.timeout || 45000, silencioso: opts.silencioso });
+      if (!session.ok) return session;
+    }
     if (conToken) headers['Authorization'] = 'Bearer ' + this.state.token;
     if (opts.idempotencia) headers['Idempotency-Key'] = opts.idempotencia;
     const ctrl = new AbortController();
@@ -1407,7 +1419,7 @@ class Component extends DCLogic {
     const timer = setTimeout(() => ctrl.abort(), ms);
     let res;
     try {
-      res = await fetch(this.base + path, {
+      res = await fetch(this.apiBaseFor(path) + path, {
         method: opts.method || 'GET', headers, signal: ctrl.signal,
         body: opts.body ? JSON.stringify(opts.body) : undefined
       });
@@ -1525,10 +1537,10 @@ class Component extends DCLogic {
       }
     }
     if (!r) {
-      return this.setState({ loading: false, waking: false, eventsLoading: false, netError: 'No hay conexión con ' + this.base + ' (' + lastErr.message + ').' });
+      return this.setState({ loading: false, waking: false, eventsLoading: false, netError: 'No hay conexión con ' + this.apiBaseFor('/api/tracking/' + tn) + ' (' + lastErr.message + ').' });
     }
     try {
-      this.setState({ waking: false, diag: 'GET ' + this.base + '/api/tracking/' + tn + ' → ' + r.status });
+      this.setState({ waking: false, diag: 'GET ' + this.apiBaseFor('/api/tracking/' + tn) + '/api/tracking/' + tn + ' → ' + r.status });
       if (r.status === 404) return this.setState({ loading: false, eventsLoading: false, notFound: true });
       if (!r.ok) return this.setState({ loading: false, eventsLoading: false, netError: (r.data && r.data.detail) || ('El servicio respondió ' + r.status + '.') });
       this.setState({ loading: false, tracking: r.data });
