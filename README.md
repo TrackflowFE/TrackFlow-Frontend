@@ -59,8 +59,10 @@ Las propiedades `shipmentsApiBaseUrl` y `logisticsApiBaseUrl` dirigen, respectiv
 API 1 (login, sesión, ciudades y registro de envíos) y a la API 3 (eventos, historial, ruta,
 acciones y centros). Igual que con reportes, mientras queden vacías esas llamadas siguen usando
 el monolito como respaldo. Las llamadas protegidas a la API 3 renuevan primero la actividad de
-la sesión en la API 1. La reconstrucción de proyecciones (pantalla de administrador) sigue yendo
-al monolito hasta que se adapte a las dos APIs.
+la sesión en la API 1. La reconstrucción de proyecciones (pantalla de administrador) llama primero a la API 1 y luego
+a la API 3, y junta los dos resultados, cuando ambas direcciones están configuradas; si falta
+alguna, sigue yendo al monolito. La API 3 debe exponer `POST /api/admin/rebuild-projections`
+y responder `{ "eventsRepublished": n }`, igual que la API 1 responde `{ "shipmentsRepublished": n }`.
 
 El plan gratuito de Render duerme el servicio: la primera consulta puede tardar cerca de un minuto, y la página lo indica mientras espera.
 

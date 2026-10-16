@@ -1404,8 +1404,8 @@ class Component extends DCLogic {
     return null;
   }
 
-  apiBaseFor(path) {
-    const destino = this.destinoDe(path);
+  apiBaseFor(path, forzado) {
+    const destino = forzado || this.destinoDe(path);
     const url = destino === 'reports' ? this.props.reportsApiBaseUrl
       : destino === 'logistics' ? this.props.logisticsApiBaseUrl
       : destino === 'shipments' ? this.props.shipmentsApiBaseUrl : '';
@@ -1419,7 +1419,7 @@ class Component extends DCLogic {
     if (opts.body) headers['Content-Type'] = 'application/json';
     const conToken = !!(this.state.token && !opts.publico);
     // API 1 es duena de la actividad de sesion; la renovacion la hace el navegador.
-    if (conToken && (/^\/api\/reports(\/|\?|$)/.test(path) || this.destinoDe(path) === 'logistics')) {
+    if (conToken && (/^\/api\/reports(\/|\?|$)/.test(path) || (opts.destino || this.destinoDe(path)) === 'logistics')) {
       const session = await this.api('/api/auth/sesion', { timeout: opts.timeout || 45000, silencioso: opts.silencioso });
       if (!session.ok) return session;
     }
@@ -1430,7 +1430,7 @@ class Component extends DCLogic {
     const timer = setTimeout(() => ctrl.abort(), ms);
     let res;
     try {
-      res = await fetch(this.apiBaseFor(path) + path, {
+      res = await fetch(this.apiBaseFor(path, opts.destino) + path, {
         method: opts.method || 'GET', headers, signal: ctrl.signal,
         body: opts.body ? JSON.stringify(opts.body) : undefined
       });
@@ -1947,10 +1947,31 @@ class Component extends DCLogic {
       })
     };
   }
+  // La reconstrucción la hacen dos APIs: primero los envíos (API 1) y después sus eventos (API 3).
+  // Si falta la dirección de alguna, se sigue usando el monolito, que hace las dos cosas.
+  async reconstruirProyecciones() {
+    const ruta = '/api/admin/rebuild-projections';
+    const configurada = (url) => !!(url && url.trim());
+    if (!configurada(this.props.shipmentsApiBaseUrl) || !configurada(this.props.logisticsApiBaseUrl)) {
+      return this.api(ruta, { method: 'POST', body: {} });
+    }
+    const envios = await this.api(ruta, { method: 'POST', body: {}, destino: 'shipments' });
+    if (!envios.ok) return envios;
+    const eventos = await this.api(ruta, { method: 'POST', body: {}, destino: 'logistics' });
+    if (!eventos.ok) return eventos;
+    return {
+      ok: true, status: 200,
+      data: {
+        shipmentsRepublished: envios.data && envios.data.shipmentsRepublished,
+        eventsRepublished: eventos.data && eventos.data.eventsRepublished
+      }
+    };
+  }
+
   rebuild = async () => {
     this.setState({ adminLoading: true, adminError: '', adminResult: null });
     try {
-      const r = await this.api('/api/admin/rebuild-projections', { method: 'POST', body: {} });
+      const r = await this.reconstruirProyecciones();
       if (r.status === 401) return this.setState({ adminLoading: false });
       if (!r.ok) return this.setState({ adminLoading: false, adminError: (r.data && r.data.detail) || ('El servicio respondió ' + r.status + '.') });
       this.setState({ adminLoading: false, adminResult: r.data });
