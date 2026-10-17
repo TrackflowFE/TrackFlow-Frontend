@@ -44,6 +44,26 @@ Luego abrir http://localhost:5173/.
 
 La URL del backend está en la propiedad `apiBaseUrl` de `index.html`; por defecto, `https://trackflow-mxll.onrender.com`. Para el backend local se cambia a `http://localhost:8080`.
 
+La propiedad `reportsApiBaseUrl` dirige exclusivamente `/api/tracking/**` y
+`/api/reports/**` a la API 2 de
+[trackflow-reports-api](https://github.com/TrackflowFE/trackflow-reports-api).
+Para pruebas locales se configura `http://localhost:8082`; en producción debe
+usarse la URL real asignada por Render después de verificar su despliegue.
+Mientras quede vacía, esas consultas siguen usando el monolito como respaldo.
+Login, sesiones, registro de envíos, eventos, historial y rutas no cambian de
+destino en esta rama. El mismo token de API 1 se envía a los reportes protegidos.
+Antes de consultar un reporte protegido, el navegador valida y renueva la
+actividad mediante `/api/auth/sesion` en API 1; API 2 solo lee las sesiones.
+
+Las propiedades `shipmentsApiBaseUrl` y `logisticsApiBaseUrl` dirigen, respectivamente, a la
+API 1 (login, sesión, ciudades y registro de envíos) y a la API 3 (eventos, historial, ruta,
+acciones y centros). Igual que con reportes, mientras queden vacías esas llamadas siguen usando
+el monolito como respaldo. Las llamadas protegidas a la API 3 renuevan primero la actividad de
+la sesión en la API 1. La reconstrucción de proyecciones (pantalla de administrador) llama primero a la API 1 y luego
+a la API 3, y junta los dos resultados, cuando ambas direcciones están configuradas; si falta
+alguna, sigue yendo al monolito. La API 3 debe exponer `POST /api/admin/rebuild-projections`
+y responder `{ "eventsRepublished": n }`, igual que la API 1 responde `{ "shipmentsRepublished": n }`.
+
 El plan gratuito de Render duerme el servicio: la primera consulta puede tardar cerca de un minuto, y la página lo indica mientras espera.
 
 ## Comportamiento destacado

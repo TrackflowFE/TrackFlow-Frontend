@@ -1283,7 +1283,7 @@ a:hover { color: #f4711a; }
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;},&quot;reportsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-reports-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 2: Reportes&quot;},&quot;shipmentsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-envios-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 1: Envíos&quot;},&quot;logisticsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-logistics.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 3: Logística&quot;}}">
 const ESTADOS = {
   REGISTERED: ['Registrado', '#e7e7ea', '#424244', 'rgba(29,31,32,.3)'],
   AT_DISTRIBUTION_CENTER: ['En centro de origen', '#e9f0fa', '#0e2646', '#1b4b8f'],
@@ -1395,11 +1395,34 @@ class Component extends DCLogic {
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
 
+  // A qué API pertenece cada ruta: reports (API 2), logistics (API 3), shipments (API 1) o ninguna.
+  destinoDe(path) {
+    if (/^\/api\/(tracking|reports)(\/|\?|$)/.test(path)) return 'reports';
+    if (/^\/api\/centers(\/|\?|$)/.test(path)
+      || /^\/api\/shipments\/[^\/?]+\/(events|route|actions)(\/|\?|$)/.test(path)) return 'logistics';
+    if (/^\/api\/(auth|cities)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)) return 'shipments';
+    return null;
+  }
+
+  apiBaseFor(path, forzado) {
+    const destino = forzado || this.destinoDe(path);
+    const url = destino === 'reports' ? this.props.reportsApiBaseUrl
+      : destino === 'logistics' ? this.props.logisticsApiBaseUrl
+      : destino === 'shipments' ? this.props.shipmentsApiBaseUrl : '';
+    // Cada API se usa solo cuando se configura su dirección; el monolito sigue como respaldo.
+    return url && url.trim() ? url.trim().replace(/\/$/, '') : this.base;
+  }
+
   async api(path, opts) {
     opts = opts || {};
     const headers = { 'Accept': 'application/json' };
     if (opts.body) headers['Content-Type'] = 'application/json';
     const conToken = !!(this.state.token && !opts.publico);
+    // API 1 es duena de la actividad de sesion; la renovacion la hace el navegador.
+    if (conToken && (/^\/api\/reports(\/|\?|$)/.test(path) || (opts.destino || this.destinoDe(path)) === 'logistics')) {
+      const session = await this.api('/api/auth/sesion', { timeout: opts.timeout || 45000, silencioso: opts.silencioso });
+      if (!session.ok) return session;
+    }
     if (conToken) headers['Authorization'] = 'Bearer ' + this.state.token;
     if (opts.idempotencia) headers['Idempotency-Key'] = opts.idempotencia;
     const ctrl = new AbortController();
@@ -1407,7 +1430,7 @@ class Component extends DCLogic {
     const timer = setTimeout(() => ctrl.abort(), ms);
     let res;
     try {
-      res = await fetch(this.base + path, {
+      res = await fetch(this.apiBaseFor(path, opts.destino) + path, {
         method: opts.method || 'GET', headers, signal: ctrl.signal,
         body: opts.body ? JSON.stringify(opts.body) : undefined
       });
@@ -1495,7 +1518,7 @@ class Component extends DCLogic {
     this.setState({ route: 'login', loginError: '', loginErrorTitle: '' });
     if (!token) return;
     try {
-      await fetch(this.base + '/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      await fetch(this.apiBaseFor('/api/auth/logout') + '/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
     } catch (e) {}
   };
 
@@ -1525,10 +1548,10 @@ class Component extends DCLogic {
       }
     }
     if (!r) {
-      return this.setState({ loading: false, waking: false, eventsLoading: false, netError: 'No hay conexión con ' + this.base + ' (' + lastErr.message + ').' });
+      return this.setState({ loading: false, waking: false, eventsLoading: false, netError: 'No hay conexión con ' + this.apiBaseFor('/api/tracking/' + tn) + ' (' + lastErr.message + ').' });
     }
     try {
-      this.setState({ waking: false, diag: 'GET ' + this.base + '/api/tracking/' + tn + ' → ' + r.status });
+      this.setState({ waking: false, diag: 'GET ' + this.apiBaseFor('/api/tracking/' + tn) + '/api/tracking/' + tn + ' → ' + r.status });
       if (r.status === 404) return this.setState({ loading: false, eventsLoading: false, notFound: true });
       if (!r.ok) return this.setState({ loading: false, eventsLoading: false, netError: (r.data && r.data.detail) || ('El servicio respondió ' + r.status + '.') });
       this.setState({ loading: false, tracking: r.data });
@@ -1617,7 +1640,7 @@ class Component extends DCLogic {
       this.setState({ submitting: false, created: r.data, createdEstado: 'ENCOLADO' });
       this.pollCreated(r.data.trackingNumber);
     } catch (err) {
-      this.setState({ submitting: false, shipErrorTitle: 'Sin conexión', shipError: 'No hay conexión con ' + this.base + ' (' + err.message + ').' });
+      this.setState({ submitting: false, shipErrorTitle: 'Sin conexión', shipError: 'No hay conexión con ' + this.apiBaseFor('/api/shipments') + ' (' + err.message + ').' });
     }
   };
 
@@ -1685,7 +1708,7 @@ class Component extends DCLogic {
         this.cargarAcciones(tn);
       }, 900);
     } catch (err) {
-      this.setState({ evSubmitting: false, evErrorTitle: 'Sin conexión', evError: 'No hay conexión con ' + this.base + ' (' + err.message + ').' });
+      this.setState({ evSubmitting: false, evErrorTitle: 'Sin conexión', evError: 'No hay conexión con ' + this.apiBaseFor('/api/shipments/TF/events') + ' (' + err.message + ').' });
     }
   };
   toggleFecha = (e) => this.setState({ useFecha: e.target.checked });
@@ -1708,7 +1731,7 @@ class Component extends DCLogic {
       try { localStorage.setItem('tf_token', r.data.token); localStorage.setItem('tf_roles', roles); } catch (err2) {}
       this.setState({ loginSubmitting: false, token: r.data.token, roles, usuario, loginError: '', loginErrorTitle: '', route: 'nuevo' });
     } catch (err) {
-      this.setState({ loginSubmitting: false, loginErrorTitle: 'Sin conexión', loginError: 'No hay conexión con ' + this.base + ' (' + err.message + ').' });
+      this.setState({ loginSubmitting: false, loginErrorTitle: 'Sin conexión', loginError: 'No hay conexión con ' + this.apiBaseFor('/api/auth/login') + ' (' + err.message + ').' });
     }
   };
 
@@ -1924,10 +1947,31 @@ class Component extends DCLogic {
       })
     };
   }
+  // La reconstrucción la hacen dos APIs: primero los envíos (API 1) y después sus eventos (API 3).
+  // Si falta la dirección de alguna, se sigue usando el monolito, que hace las dos cosas.
+  async reconstruirProyecciones() {
+    const ruta = '/api/admin/rebuild-projections';
+    const configurada = (url) => !!(url && url.trim());
+    if (!configurada(this.props.shipmentsApiBaseUrl) || !configurada(this.props.logisticsApiBaseUrl)) {
+      return this.api(ruta, { method: 'POST', body: {} });
+    }
+    const envios = await this.api(ruta, { method: 'POST', body: {}, destino: 'shipments' });
+    if (!envios.ok) return envios;
+    const eventos = await this.api(ruta, { method: 'POST', body: {}, destino: 'logistics' });
+    if (!eventos.ok) return eventos;
+    return {
+      ok: true, status: 200,
+      data: {
+        shipmentsRepublished: envios.data && envios.data.shipmentsRepublished,
+        eventsRepublished: eventos.data && eventos.data.eventsRepublished
+      }
+    };
+  }
+
   rebuild = async () => {
     this.setState({ adminLoading: true, adminError: '', adminResult: null });
     try {
-      const r = await this.api('/api/admin/rebuild-projections', { method: 'POST', body: {} });
+      const r = await this.reconstruirProyecciones();
       if (r.status === 401) return this.setState({ adminLoading: false });
       if (!r.ok) return this.setState({ adminLoading: false, adminError: (r.data && r.data.detail) || ('El servicio respondió ' + r.status + '.') });
       this.setState({ adminLoading: false, adminResult: r.data });
