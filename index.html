@@ -1720,7 +1720,10 @@ class Component extends DCLogic {
     const f = new FormData(this.loginFormRef.current);
     const usuario = (f.get('usuario') || '').toString().trim();
     const clave = (f.get('clave') || '').toString();
-    if (!usuario || !clave) return this.setState({ loginErrorTitle: 'Campos vacíos', loginError: 'Escribe usuario y clave.' });
+    // Decir qué campo falta no revela nada: el mensaje genérico es para credenciales incorrectas (HU-08).
+    if (!usuario && !clave) return this.setState({ loginErrorTitle: 'Campos vacíos', loginError: 'Escribe usuario y clave.' });
+    if (!usuario) return this.setState({ loginErrorTitle: 'Campo vacío', loginError: 'Escribe tu usuario.' });
+    if (!clave) return this.setState({ loginErrorTitle: 'Campo vacío', loginError: 'Escribe tu clave.' });
     this.setState({ loginSubmitting: true, loginError: '' });
     try {
       const r = await this.api('/api/auth/login', { method: 'POST', body: { username: usuario, password: clave }, publico: true, timeout: 45000 });
