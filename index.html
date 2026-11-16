@@ -495,6 +495,10 @@ a:hover { color: #f4711a; }
                 </div>
               </div>
 
+              <sc-if value="{{ t_restricted }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:10px 0 0;font-size:11px;color:rgba(29,31,32,.5)">Por privacidad, los nombres se muestran parcialmente.</p>
+              </sc-if>
+
               <sc-if value="{{ hayRuta }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(29,31,32,.14)">
                   <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(29,31,32,.5);margin-bottom:12px">Recorrido planificado</div>
@@ -1884,10 +1888,12 @@ class Component extends DCLogic {
 
   async fetchTracking(tn) {
     this.setState({ loading: true, waking: false, notFound: false, netError: '', tracking: null, events: null, eventsLoading: true, diag: '', ruta: null });
+    // Con sesión de operador se pide la vista completa; sin sesión, la pública.
+    const conSesion = !!this.state.token;
     let r = null, lastErr = null;
     for (let intento = 0; intento < 3; intento++) {
       try {
-        r = await this.api('/api/tracking/' + tn, { timeout: intento === 0 ? 12000 : 45000, publico: true });
+        r = await this.api('/api/tracking/' + tn, { timeout: intento === 0 ? 12000 : 45000, publico: !conSesion });
         break;
       } catch (err) {
         lastErr = err;
@@ -1902,6 +1908,7 @@ class Component extends DCLogic {
     try {
       this.setState({ waking: false, diag: 'GET ' + this.apiBaseFor('/api/tracking/' + tn) + '/api/tracking/' + tn + ' → ' + r.status });
       if (r.status === 404) return this.setState({ loading: false, eventsLoading: false, notFound: true });
+      if (r.status === 429) return this.setState({ loading: false, eventsLoading: false, netError: 'Demasiadas consultas; espera ' + (Number(r.retryAfter) || 60) + ' segundos.' });
       if (!r.ok) return this.setState({ loading: false, eventsLoading: false, netError: (r.data && r.data.detail) || ('El servicio respondió ' + r.status + '.') });
       this.setState({ loading: false, tracking: r.data });
       const ev = await this.api('/api/shipments/' + tn + '/events', { timeout: 20000, publico: true });
@@ -2191,7 +2198,7 @@ class Component extends DCLogic {
       this.setState({ evSubmitting: false, evOk: tn, evClave: null, useFecha: false });
       setTimeout(async () => {
         try {
-          const rt = await this.api('/api/tracking/' + tn, { timeout: 12000, publico: true });
+          const rt = await this.api('/api/tracking/' + tn, { timeout: 12000 });
           if (rt.ok) this.setState({ evCtx: rt.data });
         } catch (e2) {}
         this.cargarAcciones(tn);
@@ -2555,7 +2562,8 @@ class Component extends DCLogic {
     if (e.type === 'OUT_FOR_DELIVERY') return e.delivererName ? 'Repartidor: ' + e.delivererName : '';
     if (e.type === 'DELIVERED') {
       const dir = t && t.recipientAddress, ciu = this.ciudadCorta(t && t.destinationCity);
-      return [dir, ciu].filter(Boolean).join(' · ') || 'Entrega realizada';
+      if (dir) return [dir, ciu].filter(Boolean).join(' · ');
+      return ciu ? 'Entregado en ' + ciu : 'Entrega realizada';
     }
     return [e.point, this.ciudadCorta(e.cityName)].filter(Boolean).join(' · ');
   }
@@ -2646,7 +2654,7 @@ class Component extends DCLogic {
     this._ctxT = setTimeout(async () => {
       this.setState({ ctxLoading: true, ctxNotFound: false });
       try {
-        const r = await this.api('/api/tracking/' + tn, { timeout: 15000, publico: true });
+        const r = await this.api('/api/tracking/' + tn, { timeout: 15000 });
         if (r.status === 404) { this.setState({ ctxLoading: false, evCtx: null, ctxNotFound: true, acciones: [], tipoSel: '', centroId: null }); return; }
         const ctx = r.ok ? r.data : null;
         this.setState({ ctxLoading: false, evCtx: ctx });
@@ -2818,8 +2826,9 @@ class Component extends DCLogic {
       t_origen: t ? (t.originCity || '—') : '',
       t_remitente: t ? (t.senderName || '') : '',
       t_destinatario: t ? (t.recipientName || '') : '',
+      t_restricted: !!(t && t.restricted),
       t_ubicLabel: t && t.status === 'DELIVERED' ? 'Entregado en' : 'Última ubicación',
-      t_ultimoPunto: t ? (t.status === 'DELIVERED' ? (t.recipientAddress || t.lastMovementPoint || '—') : (t.lastMovementPoint || 'Sin movimientos reportados')) : '',
+      t_ultimoPunto: t ? (t.status === 'DELIVERED' ? (t.recipientAddress || 'Entregado en ' + this.ciudadCorta(t.destinationCity)) : (t.lastMovementPoint || 'Sin movimientos reportados')) : '',
       t_ubicSub: t && t.status === 'DELIVERED' ? this.ciudadCorta(t.destinationCity) : '',
       t_ultimoMov: t && t.lastMovementAt ? this.fmt(t.lastMovementAt) : 'Registrado, sin pasos por centro',
       pasos, pasosGrid: { display: 'grid', gridTemplateColumns: 'repeat(' + ORDEN.length + ',minmax(0,1fr))', margin: '24px 0 4px' }, frase: t ? paso[2] : '', fraseSub: t ? paso[3] : '',
