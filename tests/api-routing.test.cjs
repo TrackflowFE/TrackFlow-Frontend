@@ -36,7 +36,8 @@ test('each route goes to the API that owns it', () => {
   const { app } = component(URLS);
   const esperado = {
     'https://shipments.example': ['/api/auth/login', '/api/auth/sesion', '/api/auth/logout',
-      '/api/cities?q=ma&onlyCovered=true', '/api/shipments', '/api/pickups', '/api/pickups?status=REQUESTED',
+      '/api/cities?q=ma&onlyCovered=true', '/api/shipments', '/api/shipments/TF123/receipt',
+      '/api/pickups', '/api/pickups?status=REQUESTED',
       '/api/pickups/operating-hours', '/api/pickups/RC123/schedule'],
     'https://logistics.example': ['/api/shipments/TF123/events', '/api/shipments/TF123/route',
       '/api/shipments/TF123/actions', '/api/centers'],

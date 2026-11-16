@@ -10,8 +10,8 @@ Prototipo funcional del frontend de TrackFlow (Fábrica Escuela, UdeA 2026-2). C
 
 | Pantalla | Acceso | Historia |
 |---|---|---|
-| Rastrear envío: estado, pasos y línea de tiempo | Público | HU-03, HU-04 |
-| Registrar envío | Operador | HU-01 |
+| Rastrear envío: estado, pasos y línea de tiempo | Público | HU-03, HU-04, HU-14 |
+| Registrar envío | Operador | HU-01, HU-14 |
 | Registrar evento logístico | Operador | HU-02 |
 | Solicitar recogida a domicilio | Público / Operador | HU-20 |
 | Gestionar mi recogida | Público con código de gestión | HU-20 |
@@ -80,6 +80,8 @@ El plan gratuito de Render duerme el servicio: la primera consulta puede tardar 
 - La lista (`GET /api/pickups?status=...`) y el detalle permiten reprogramar y asignar (`PUT /{numero}/schedule`, con `scheduledDate`, `timeSlot` y `assignedUsername`), cancelar, despachar, completar y vincular una guía. Los operadores asignables se obtienen de `GET /api/pickups/assignees`. La dirección y el contacto solo se muestran cuando API 1 devuelve `accessRestricted: false`.
 - Las escrituras de recogidas responden `202` antes de procesarse: el detalle puede devolver 404 o conservar el estado anterior. Actualizar para confirmar; un comando que pierda una carrera puede rechazarse en el consumidor y no producir cambios.
 - Un envío recogido puede aparecer como `IN_CUSTODY` y su historial como `PICKED_UP`. El paso de custodia solo se muestra si existe ese estado o movimiento. Si la recogida se completa sin guía, la custodia comienza al vincularla.
+- **Comprobante (HU-14):** al registrar, la confirmación permite imprimir el comprobante y copiar el número con aviso de éxito o de error. El comprobante es una sola plantilla que se usa para imprimir y reimprimir: número, código de barras Code 128, fecha, origen, destino, destinatario y remitente. Al imprimir solo se ve ese bloque, en la mitad superior de una hoja carta y en blanco y negro (NFR-20); no muestra teléfono ni dirección (NFR-21).
+- La reimpresión aparece en el resultado del rastreo cuando hay sesión de operador o administrador (`GET /api/shipments/{numero}/receipt`, ruta de la API 1). Un 404 avisa de que el envío aún se está registrando o no existe. Si el portapapeles falla, se pide seleccionar el número manualmente.
 
 ## Pruebas
 

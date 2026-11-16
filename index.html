@@ -192,9 +192,42 @@ a:hover { color: #f4711a; }
   background: #f7f9fc;
   border-color: rgba(27,75,143,.22);
 }
+/* HU-14: el comprobante vive oculto en pantalla y es lo único visible al imprimir. */
+.tf-comprobante { display: none; }
+@media print {
+  @page { size: letter portrait; margin: 10mm; }
+  body * { visibility: hidden; }
+  /* El resto de la aplicación se saca del flujo: si solo se ocultara, su altura
+     seguiría generando páginas en blanco detrás del comprobante. */
+  .tf-app-root { display: block !important; min-height: 0 !important; }
+  .tf-app-root > header, .tf-app-root > footer, .tf-app-root main { display: none !important; }
+  .tf-comprobante, .tf-comprobante * { visibility: visible; }
+  .tf-comprobante {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 190mm;
+    max-height: 125mm;
+    box-sizing: border-box;
+    padding: 6mm;
+    border: 1pt solid #000;
+    background: #fff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  .tf-comprobante-titulo { font-size: 12pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .tf-comprobante-numero { font-size: 20pt; font-weight: 700; letter-spacing: .12em; margin: 2mm 0 1mm; font-variant-numeric: tabular-nums; }
+  .tf-comprobante-barras { display: block; width: 90mm; height: 18mm; margin: 0 0 3mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .tf-comprobante-fila { display: flex; gap: 4mm; border-top: .5pt solid #000; padding: 1mm 0; }
+  .tf-comprobante-fila > span:first-child { width: 32mm; flex: none; font-weight: 700; }
+  .tf-comprobante-pie { margin-top: 3mm; border-top: 1pt solid #000; padding-top: 2mm; }
+}
 </style>
 </helmet>
-<div style="--color-accent:#1b4b8f;--color-accent-100:#e9f0fa;--color-accent-200:#cfe0f3;--color-accent-600:#163d76;--color-accent-700:#12305c;--color-accent-800:#0e2646;--color-accent-2:#f4711a;--color-accent-2-100:#fdeee1;--color-accent-2-800:#7a3606;min-height:100vh;display:flex;flex-direction:column;background:#f2f2f3;color:#1d1f20;font-family:var(--font-body);font-size:16px">
+<div class="tf-app-root" style="--color-accent:#1b4b8f;--color-accent-100:#e9f0fa;--color-accent-200:#cfe0f3;--color-accent-600:#163d76;--color-accent-700:#12305c;--color-accent-800:#0e2646;--color-accent-2:#f4711a;--color-accent-2-100:#fdeee1;--color-accent-2-800:#7a3606;min-height:100vh;display:flex;flex-direction:column;background:#f2f2f3;color:#1d1f20;font-family:var(--font-body);font-size:16px">
 
   <header class="tf-app-header" style="display:flex;align-items:center;gap:22px;padding:12px 34px;background:#12305c;color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 1px 0 rgba(255,255,255,.08),0 8px 24px rgba(4,14,32,.18)">
     <button onClick="{{ goHome }}" style="background:none;border:0;padding:0;cursor:pointer;display:block;margin-right:auto">
@@ -488,6 +521,12 @@ a:hover { color: #f4711a; }
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg>
                   Compartir seguimiento
                 </button>
+                <sc-if value="{{ puedeReimprimir }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ reimprimirComprobante }}" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:9px;height:auto;min-height:44px;padding:10px 16px;white-space:nowrap">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Reimprimir comprobante
+                  </button>
+                </sc-if>
                 <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
                   <span style="font-size:12px;color:#1c5130">{{ copied }}</span>
                 </sc-if>
@@ -574,9 +613,14 @@ a:hover { color: #f4711a; }
               <span class="tag" style="background:#fdeee1;color:#7a3606">{{ c_procesamiento }}</span>
               <span style="font-size:12px;color:rgba(29,31,32,.6)">{{ c_nota }}</span>
             </div>
-            <div style="display:flex;gap:10px;margin-top:20px">
+            <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center">
               <button onClick="{{ verCreado }}" class="btn btn-primary" style="background:#f4711a;border-color:#f4711a;color:#fff" style-hover="background:#d9600f;border-color:#d9600f">Ver seguimiento</button>
+              <button onClick="{{ imprimirComprobante }}" class="btn btn-secondary">Imprimir comprobante</button>
+              <button onClick="{{ copiarNumeroCreado }}" class="btn btn-secondary">Copiar número</button>
               <button onClick="{{ otroEnvio }}" class="btn btn-secondary">Registrar otro</button>
+              <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                <span role="status" style="font-size:12px;color:#1c5130">{{ copied }}</span>
+              </sc-if>
             </div>
           </div>
         </sc-if>
@@ -1377,6 +1421,20 @@ a:hover { color: #f4711a; }
   </main>
   </sc-if>
 
+  <sc-if value="{{ comprobante }}" hint-placeholder-val="{{ false }}">
+    <div class="tf-comprobante">
+      <div class="tf-comprobante-titulo">TrackFlow — Comprobante de envío</div>
+      <div class="tf-comprobante-numero">{{ comp_numero }}</div>
+      <img class="tf-comprobante-barras" src="{{ comp_barras }}" alt="Código de barras {{ comp_numero }}">
+      <div class="tf-comprobante-fila"><span>Fecha de registro</span><span>{{ comp_fecha }}</span></div>
+      <div class="tf-comprobante-fila"><span>Origen</span><span>{{ comp_origen }}</span></div>
+      <div class="tf-comprobante-fila"><span>Destino</span><span>{{ comp_destino }}</span></div>
+      <div class="tf-comprobante-fila"><span>Destinatario</span><span>{{ comp_destinatario }}</span></div>
+      <div class="tf-comprobante-fila"><span>Remitente</span><span>{{ comp_remitente }}</span></div>
+      <div class="tf-comprobante-pie">{{ comp_rastreo }}</div>
+    </div>
+  </sc-if>
+
   <footer style="background:#14305c;height:18px"></footer>
 </div>
 
@@ -1442,6 +1500,96 @@ function validarHorarioRecogida(date, slot, hours, now = new Date()) {
   return '';
 }
 
+// ── HU-14: comprobante imprimible ──
+// Code 128, subconjunto B: cubre "TF" + 12 caracteres A–Z/0–9, que es el formato de guía.
+const CODE128 = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+  '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+  '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+  '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+  '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
+];
+const CODE128_INICIO_B = 104;
+const CODE128_PARADA = 106;
+
+// Anchuras alternas barra/espacio, empezando por barra: inicio B, datos, control (módulo 103) y parada.
+function codigo128(texto) {
+  const datos = String(texto == null ? '' : texto).toUpperCase();
+  const valores = [];
+  for (const ch of datos) {
+    const code = ch.charCodeAt(0);
+    if (code < 32 || code > 126) throw new Error('Carácter no representable en Code 128 B: ' + ch);
+    valores.push(code - 32);
+  }
+  let suma = CODE128_INICIO_B;
+  valores.forEach((valor, i) => { suma += valor * (i + 1); });
+  const control = suma % 103;
+  const patrones = [CODE128[CODE128_INICIO_B]]
+    .concat(valores.map(valor => CODE128[valor]))
+    .concat([CODE128[control], CODE128[CODE128_PARADA]]);
+  return patrones.join('').split('').map(Number);
+}
+
+// Imagen y no barras con fondos de color: los navegadores no imprimen fondos por defecto.
+function codigoBarrasSvg(texto) {
+  const anchos = codigo128(texto);
+  const silencio = 10;
+  const altoBarra = 60;
+  const altoTexto = 18;
+  const total = anchos.reduce((suma, ancho) => suma + ancho, 0) + silencio * 2;
+  let x = silencio;
+  let barras = '';
+  anchos.forEach((ancho, i) => {
+    if (i % 2 === 0) barras += '<rect x="' + x + '" y="0" width="' + ancho + '" height="' + altoBarra + '" fill="#000"/>';
+    x += ancho;
+  });
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + total + '" height="' + (altoBarra + altoTexto)
+    + '" viewBox="0 0 ' + total + ' ' + (altoBarra + altoTexto) + '" shape-rendering="crispEdges">'
+    + '<rect width="100%" height="100%" fill="#fff"/>' + barras
+    + '<text x="' + (total / 2) + '" y="' + (altoBarra + 14) + '" text-anchor="middle" font-family="monospace" font-size="12" fill="#000">'
+    + String(texto) + '</text></svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function urlRastreoPublica() {
+  try {
+    if (typeof location !== 'undefined' && location && location.origin) return location.origin + location.pathname;
+  } catch (e) {}
+  return 'la página de rastreo de TrackFlow';
+}
+
+// Única fuente de lo que se imprime: copia solo los campos permitidos y fija la zona horaria.
+function vistaComprobante(receipt, urlPublica) {
+  const r = receipt || {};
+  const numero = r.trackingNumber || '';
+  let fecha = '';
+  if (r.registeredAt) {
+    const d = new Date(r.registeredAt);
+    if (!isNaN(d.getTime())) {
+      fecha = new Intl.DateTimeFormat('es-CO', {
+        timeZone: 'America/Bogota', year: 'numeric', month: 'long', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      }).format(d);
+    }
+  }
+  return {
+    numero,
+    barras: numero ? codigoBarrasSvg(numero) : '',
+    fecha,
+    origen: r.originCity || '',
+    destino: r.destinationCity || '',
+    destinatario: r.recipientName || '',
+    remitente: r.senderName || '',
+    rastreo: 'Consulte su envío en ' + (urlPublica || urlRastreoPublica()) + ' con este número.'
+  };
+}
+
 // Claves en inglés: así las devuelve el backend en missingFields (contrato en inglés).
 const FIELD_MAP = {
   'sender.fullName': ['rem_nombre', 'Nombre del remitente'],
@@ -1483,7 +1631,7 @@ class Component extends DCLogic {
       remTipo: 'CC', desTipo: 'CC',
       remCityText: '', desCityText: '', remCityId: null, desCityId: null,
       remCities: [], desCities: [], remOpen: false, desOpen: false,
-      submitting: false, shipError: '', shipErrorTitle: '', shipMissing: [], fieldErrors: {}, created: null, createdEstado: '',
+      submitting: false, shipError: '', shipErrorTitle: '', shipMissing: [], fieldErrors: {}, created: null, createdEstado: '', comprobante: null,
       useFecha: false, evSubmitting: false, evError: '', evErrorTitle: '', evOk: null, evTnDefault: '',
       loginSubmitting: false, loginError: '', loginErrorTitle: '',
       adminLoading: false, adminResult: null, adminError: '',
@@ -1539,7 +1687,7 @@ class Component extends DCLogic {
     try { localStorage.removeItem('tf_token'); localStorage.removeItem('tf_roles'); } catch (e) {}
     // Se borran también los datos operativos en pantalla: tras cerrar sesión no debe
     // quedar nada de la operación visible (ni volviendo con el botón atrás).
-    this.setState({ token: null, roles: '', usuario: '', created: null, evCtx: null, acciones: [], ubicacionActual: null,
+    this.setState({ token: null, roles: '', usuario: '', created: null, comprobante: null, evCtx: null, acciones: [], ubicacionActual: null,
       tipoSel: '', centroId: null, evOk: null, evClave: null, adminResult: null, opsOpen: false, userOpen: false,
       repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '',
       pickupCreated: null, pickupCreatedGuide: '', pickupCode: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
@@ -1552,7 +1700,8 @@ class Component extends DCLogic {
     if (/^\/api\/(tracking|reports)(\/|\?|$)/.test(path)) return 'reports';
     if (/^\/api\/centers(\/|\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/(events|route|actions)(\/|\?|$)/.test(path)) return 'logistics';
-    if (/^\/api\/(auth|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)) return 'shipments';
+    if (/^\/api\/(auth|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)
+      || /^\/api\/shipments\/[^\/?]+\/receipt(\?|$)/.test(path)) return 'shipments';
     return null;
   }
 
@@ -1598,7 +1747,7 @@ class Component extends DCLogic {
     // HU-08: si el servidor rechaza el token (sesión cerrada, vencida o inactiva más de
     // 30 min), se descarta y se lleva al login con la explicación.
     if (res.status === 401 && conToken && !opts.silencioso) this.sesionTerminada();
-    return { ok: res.ok, status: res.status, data, retryAfter: res.headers.get('Retry-After') };
+    return { ok: res.ok, status: res.status, data, retryAfter: res.headers && typeof res.headers.get === 'function' ? res.headers.get('Retry-After') : null };
   }
 
   sesionTerminada() {
@@ -1967,7 +2116,8 @@ class Component extends DCLogic {
   }
 
   verCreado = () => { const tn = this.state.created.trackingNumber; this.setState({ q: tn, route: 'result' }); this.fetchTracking(tn); };
-  otroEnvio = () => this.setState({ created: null, remCityText: '', desCityText: '', remCityId: null, desCityId: null, shipError: '' });
+  otroEnvio = () => this.setState({ created: null, comprobante: null, remCityText: '', desCityText: '', remCityId: null,
+    desCityId: null, shipError: '' });
 
   // ── evento ──
   submitEvent = async (e) => {
@@ -2382,13 +2532,14 @@ class Component extends DCLogic {
 
   copy(text, msg) {
     const done = () => { this.setState({ copied: msg }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 2600); };
+    const fail = () => { this.setState({ copied: 'No se pudo copiar; selecciona el número manualmente' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 4000); };
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, () => {}); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, fail); return; }
     } catch (e) {}
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); done(); } catch (e) {}
+    try { if (document.execCommand('copy')) done(); else fail(); } catch (e) { fail(); }
     document.body.removeChild(ta);
   }
   evTipoRef = React.createRef();
@@ -2441,6 +2592,33 @@ class Component extends DCLogic {
   };
 
   copyTn = () => { const t = this.state.tracking; if (t) this.copy(t.trackingNumber, 'Número copiado'); };
+
+  // ── HU-14: comprobante ──
+  avisar = (msg) => {
+    this.setState({ copied: msg });
+    clearTimeout(this._ct);
+    this._ct = setTimeout(() => this.setState({ copied: '' }), 4000);
+  };
+  imprimirComprobante = () => {
+    const receipt = this.state.created && this.state.created.receipt;
+    if (!receipt) return;
+    this.setState({ comprobante: receipt }, () => { try { window.print(); } catch (e) {} });
+  };
+  copiarNumeroCreado = () => {
+    const c = this.state.created;
+    if (c) this.copy(c.trackingNumber, 'Número copiado');
+  };
+  reimprimirComprobante = async () => {
+    const t = this.state.tracking;
+    if (!t) return;
+    try {
+      const r = await this.api('/api/shipments/' + encodeURIComponent(t.trackingNumber) + '/receipt', { timeout: 45000 });
+      if (r.status === 401) return;
+      if (r.status === 404) return this.avisar('El envío aún se está registrando o no existe; intenta en unos segundos');
+      if (!r.ok) return this.avisar('No se pudo obtener el comprobante.');
+      this.setState({ comprobante: r.data }, () => { try { window.print(); } catch (e) {} });
+    } catch (e) { this.avisar('No se pudo obtener el comprobante.'); }
+  };
   shareLink = () => {
     const t = this.state.tracking; if (!t) return;
     const url = location.origin + location.pathname + '?guia=' + t.trackingNumber;
@@ -2515,6 +2693,7 @@ class Component extends DCLogic {
       };
     });
     const c = s.created;
+    const comp = s.comprobante ? vistaComprobante(s.comprobante) : null;
     const estadoProc = s.createdEstado === 'REGISTRADO' ? 'Registrado y consultable'
       : s.createdEstado === 'PROCESANDO' ? 'Procesando…' : 'Encolado';
     return {
@@ -2579,6 +2758,11 @@ class Component extends DCLogic {
       pasos, pasosGrid: { display: 'grid', gridTemplateColumns: 'repeat(' + ORDEN.length + ',minmax(0,1fr))', margin: '24px 0 4px' }, frase: t ? paso[2] : '', fraseSub: t ? paso[3] : '',
       estadoDot: { width: '7px', height: '7px', borderRadius: '50%', background: est ? est[3] : 'transparent', flex: 'none' },
       copyTn: this.copyTn, shareLink: this.shareLink, copied: s.copied || '',
+      puedeReimprimir: !!s.token && /OPERADOR|ADMIN/.test(s.roles), reimprimirComprobante: this.reimprimirComprobante,
+      comprobante: !!comp, comp_numero: comp ? comp.numero : '', comp_barras: comp ? comp.barras : '',
+      comp_fecha: comp ? comp.fecha : '', comp_origen: comp ? comp.origen : '', comp_destino: comp ? comp.destino : '',
+      comp_destinatario: comp ? comp.destinatario : '', comp_remitente: comp ? comp.remitente : '',
+      comp_rastreo: comp ? comp.rastreo : '',
       onEvTn: this.onEvTn, onTipo: this.onTipo, onCentroSel: this.onCentroSel,
       acciones: accs.map(a => ({ tipo: a.type, etiqueta: a.label || TIPOS[a.type] || a.type })),
       tipoSel: s.tipoSel || '', sinAcciones: accs.length === 0,
@@ -2703,6 +2887,7 @@ class Component extends DCLogic {
       c_procesamiento: estadoProc,
       c_nota: 'El número de guía ya es definitivo, aunque el registro siga procesándose.',
       verCreado: this.verCreado, otroEnvio: this.otroEnvio,
+      imprimirComprobante: this.imprimirComprobante, copiarNumeroCreado: this.copiarNumeroCreado,
       submitEvent: this.submitEvent, evSubmitting: s.evSubmitting,
       evSubmitLabel: s.evSubmitting ? 'Enviando…' : 'Registrar evento',
       evError: s.evError, evErrorTitle: s.evErrorTitle, evOk: !!s.evOk, evOkTn: s.evOk || '',
