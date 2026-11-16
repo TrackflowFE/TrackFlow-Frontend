@@ -1418,7 +1418,7 @@ const DOC_HINTS = {
 const TN_RE = /^TF[A-Z0-9]{12}$/;
 const PICKUP_RE = /^RC[A-Z0-9]{12}$/;
 const PICKUP_STATES = { REQUESTED: 'Solicitada', SCHEDULED: 'Programada', ON_THE_WAY: 'En camino', PICKED_UP: 'Recogida', CANCELLED: 'Cancelada' };
-const PICKUP_EVENTS = { CREATED: 'Solicitada', SCHEDULED: 'Programada', RESCHEDULED: 'Reprogramada', ASSIGNED: 'Asignada', DISPATCHED: 'Despachada', COMPLETED: 'Recogida', CANCELLED: 'Cancelada', SHIPMENT_LINKED: 'Guía vinculada' };
+const PICKUP_EVENTS = { CREATED: 'Solicitada', SCHEDULED: 'Programada', RESCHEDULED: 'Reprogramada', ASSIGNED: 'Asignada', DISPATCHED: 'Despachada', COMPLETED: 'Recogida', CANCELLED: 'Cancelada', REJECTED: 'Rechazada', SHIPMENT_LINKED: 'Guía vinculada' };
 
 function validarHorarioRecogida(date, slot, hours, now = new Date()) {
   if (!hours || !Array.isArray(hours.slots) || !Array.isArray(hours.days) || !hours.timeZone) return 'No se pudo cargar el horario de recogidas.';

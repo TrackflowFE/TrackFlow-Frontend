@@ -184,6 +184,20 @@ test('history translates events and preserves non-private details for restricted
   assert.equal(view.pdAwaitingGuide, true);
 });
 
+test('history labels rejected events and preserves sender and operation actors in both views', () => {
+  const { app } = setup();
+  app.state.pickupDetail = { status: 'REQUESTED', accessRestricted: false, history: [
+    { type: 'REJECTED', actor: 'remitente', detail: 'Horario no disponible' },
+    { type: 'RESCHEDULED', actor: 'operador', detail: 'Nueva franja' }
+  ] };
+  for (const route of ['mi-recogida', 'recogidas']) {
+    app.state.route = route;
+    const view = app.renderVals();
+    assert.equal(view.pdHistory[0].label, '— · Rechazada · remitente · Horario no disponible');
+    assert.equal(view.pdHistory[1].label, '— · Reprogramada · operador · Nueva franja');
+  }
+});
+
 test('labels all states and suppresses private fields for restricted details', () => {
   const { app } = setup();
   for (const [status, label] of Object.entries({ REQUESTED: 'Solicitada', SCHEDULED: 'Programada', ON_THE_WAY: 'En camino', PICKED_UP: 'Recogida', CANCELLED: 'Cancelada' })) {
