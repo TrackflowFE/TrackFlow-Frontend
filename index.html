@@ -969,10 +969,10 @@ a:hover { color: #f4711a; }
             </div>
             <div class="tf-rep-filtros" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end">
               <div class="field" style="margin:0"><label>Desde</label>
-                <input class="input" type="date" value="{{ repDesde }}" max="{{ repHoyIso }}" onChange="{{ onRepDesde }}">
+                <input class="input" type="date" value="{{ repDesde }}" min="{{ repMinIso }}" max="{{ repHoyIso }}" onChange="{{ onRepDesde }}">
               </div>
               <div class="field" style="margin:0"><label>Hasta (inclusive)</label>
-                <input class="input" type="date" value="{{ repHasta }}" max="{{ repHoyIso }}" onChange="{{ onRepHasta }}">
+                <input class="input" type="date" value="{{ repHasta }}" min="{{ repMinIso }}" max="{{ repHoyIso }}" onChange="{{ onRepHasta }}">
               </div>
               <button type="submit" class="btn btn-primary" disabled="{{ repLoading }}" style="min-height:44px;padding:0 26px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff;border-radius:4px" style-hover="background:#d9600f;border-color:#d9600f">{{ repBoton }}</button>
             </div>
@@ -1214,10 +1214,10 @@ a:hover { color: #f4711a; }
             </div>
             <div class="tf-rep-filtros" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end">
               <div class="field" style="margin:0"><label>Desde</label>
-                <input class="input" type="date" value="{{ tieDesde }}" max="{{ tieHoyIso }}" onChange="{{ onTieDesde }}">
+                <input class="input" type="date" value="{{ tieDesde }}" min="{{ repMinIso }}" max="{{ tieHoyIso }}" onChange="{{ onTieDesde }}">
               </div>
               <div class="field" style="margin:0"><label>Hasta (inclusive)</label>
-                <input class="input" type="date" value="{{ tieHasta }}" max="{{ tieHoyIso }}" onChange="{{ onTieHasta }}">
+                <input class="input" type="date" value="{{ tieHasta }}" min="{{ repMinIso }}" max="{{ tieHoyIso }}" onChange="{{ onTieHasta }}">
               </div>
               <button type="submit" class="btn btn-primary" disabled="{{ tieLoading }}" style="min-height:44px;padding:0 26px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff;border-radius:4px" style-hover="background:#d9600f;border-color:#d9600f">{{ tieBoton }}</button>
             </div>
@@ -1814,6 +1814,7 @@ class Component extends DCLogic {
   goReporte = () => {
     if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
     this.setState({ route: 'reporte', opsOpen: false });
+    this.cargarLimitesReportes();
     // Al entrar se muestra la última semana, que es la vista más útil para dimensionar.
     if (!this.state.repData && !this.state.repLoading) this.aplicarPreset('semana', true);
   };
@@ -1827,6 +1828,7 @@ class Component extends DCLogic {
   goTiempos = () => {
     if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
     this.setState({ route: 'tiempos', opsOpen: false });
+    this.cargarLimitesReportes();
     // Al entrar se muestra la última semana, igual que en el reporte de volumen.
     if (!this.state.tieData && !this.state.tieLoading) this.aplicarPresetTiempos('semana', true);
   };
@@ -2225,6 +2227,33 @@ class Component extends DCLogic {
     const f = new Date(Date.UTC(y, m - 1, d + dias));
     return f.toISOString().slice(0, 10);
   }
+  diasEntre(desde, hasta) {
+    return Math.round((Date.parse(hasta + 'T00:00:00Z') - Date.parse(desde + 'T00:00:00Z')) / 86400000);
+  }
+  // Los límites vienen del servidor para no ofrecer un periodo que va a rechazar.
+  // Si la consulta falla, el formulario sigue y el 400 del servidor muestra el motivo.
+  async cargarLimitesReportes() {
+    if (this.state.repLimites || this._limitesCargando) return;
+    this._limitesCargando = true;
+    try {
+      const r = await this.api('/api/reports/period-limits', { timeout: 20000 });
+      if (r.ok && r.data) this.setState({ repLimites: r.data });
+    } catch (e) {}
+    this._limitesCargando = false;
+  }
+  validarPeriodo(desde, hasta) {
+    const lim = this.state.repLimites;
+    if (lim && lim.minDate && desde < lim.minDate) {
+      return 'El periodo empieza antes del inicio de la operación (' + lim.minDate + '); no hay envíos anteriores a esa fecha.';
+    }
+    if (lim && lim.maxDays) {
+      const dias = this.diasEntre(desde, hasta) + 1;
+      if (dias > lim.maxDays) {
+        return 'El periodo abarca ' + dias + ' días; el máximo es ' + lim.maxDays + '. Acorte el rango.';
+      }
+    }
+    return '';
+  }
   aplicarPreset(preset, consultar) {
     const hoy = this.hoyColombia();
     const desde = preset === 'hoy' ? hoy : preset === 'semana' ? this.sumarDias(hoy, -6) : hoy.slice(0, 8) + '01';
@@ -2244,6 +2273,8 @@ class Component extends DCLogic {
     if (!repDesde || !repHasta) return this.setState({ repErrorTitle: 'Periodo incompleto', repError: 'Indica la fecha inicial y la final del periodo.' });
     if (repHasta < repDesde) return this.setState({ repErrorTitle: 'Periodo inválido', repError: 'La fecha final no puede ser anterior a la inicial.' });
     if (repDesde > hoy) return this.setState({ repErrorTitle: 'Periodo inválido', repError: 'El periodo no puede empezar en el futuro.' });
+    const fueraDeLimites = this.validarPeriodo(repDesde, repHasta);
+    if (fueraDeLimites) return this.setState({ repErrorTitle: 'Periodo inválido', repError: fueraDeLimites });
     this.setState({ repLoading: true, repError: '', repErrorTitle: '' });
     try {
       const r = await this.api('/api/reports/shipment-volume?from=' + repDesde + '&to=' + repHasta, { timeout: 45000 });
@@ -2282,6 +2313,7 @@ class Component extends DCLogic {
       repMes: () => this.aplicarPreset('mes', true),
       repPresetHoy: preset('hoy'), repPresetSemana: preset('semana'), repPresetMes: preset('mes'),
       repDesde: s.repDesde, repHasta: s.repHasta, repHoyIso: this.hoyColombia(),
+      repMinIso: (s.repLimites && s.repLimites.minDate) || '',
       onRepDesde: this.onRepDesde, onRepHasta: this.onRepHasta, consultarReporte: this.consultarReporte,
       repLoading: s.repLoading, repBoton: s.repLoading ? 'Consultando…' : 'Consultar',
       repError: s.repError, repErrorTitle: s.repErrorTitle,
@@ -2365,6 +2397,8 @@ class Component extends DCLogic {
     if (!tieDesde || !tieHasta) return this.setState({ tieErrorTitle: 'Periodo incompleto', tieError: 'Indica la fecha inicial y la final del periodo.' });
     if (tieHasta < tieDesde) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: 'La fecha final no puede ser anterior a la inicial.' });
     if (tieDesde > hoy) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: 'El periodo no puede empezar en el futuro.' });
+    const fueraDeLimites = this.validarPeriodo(tieDesde, tieHasta);
+    if (fueraDeLimites) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: fueraDeLimites });
     this.setState({ tieLoading: true, tieError: '', tieErrorTitle: '' });
     try {
       const r = await this.api('/api/reports/transit-times?from=' + tieDesde + '&to=' + tieHasta, { timeout: 45000 });
@@ -2397,6 +2431,7 @@ class Component extends DCLogic {
       tieMes: () => this.aplicarPresetTiempos('mes', true),
       tiePresetHoy: preset('hoy'), tiePresetSemana: preset('semana'), tiePresetMes: preset('mes'),
       tieDesde: s.tieDesde, tieHasta: s.tieHasta, tieHoyIso: this.hoyColombia(),
+      repMinIso: (s.repLimites && s.repLimites.minDate) || '',
       onTieDesde: this.onTieDesde, onTieHasta: this.onTieHasta, consultarTiempos: this.consultarTiempos,
       tieLoading: s.tieLoading, tieBoton: s.tieLoading ? 'Consultando…' : 'Consultar',
       tieError: s.tieError, tieErrorTitle: s.tieErrorTitle,
