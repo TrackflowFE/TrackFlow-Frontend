@@ -89,6 +89,20 @@ El plan gratuito de Render duerme el servicio: la primera consulta puede tardar 
 node --test tests/*.test.cjs
 ```
 
+La impresión del comprobante se verifica aparte, porque necesita un navegador. Con Edge
+instalado (o `MSEDGE_PATH` apuntando a su ejecutable):
+
+```bash
+node tests/print/print-check.cjs    # media hoja carta y una sola página (NFR-20)
+node tests/print/barcode-check.cjs  # ZXing lee el código de barras y devuelve el número
+```
+
+`print-check` toma el CSS y la plantilla de `index.html`, genera el PDF con Edge sin
+ventana y mide la caja en modo impresión. `barcode-check` carga ZXing desde la CDN en el
+mismo Edge y decodifica varios números. Los archivos generados quedan en
+`tests/print/out/`, que no se versiona. La lectura en papel sigue siendo una comprobación
+manual con la cámara o un lector.
+
 ## Publicarlo
 
 Si se publica (por ejemplo con GitHub Pages), el dominio debe agregarse a la variable `TRACKFLOW_CORS_ORIGINS` del servicio en Render; si no, el navegador bloqueará las llamadas a la API.
