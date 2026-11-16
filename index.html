@@ -406,6 +406,14 @@ a:hover { color: #f4711a; }
             <p style="margin:0 0 4px;color:rgba(29,31,32,.7);font-size:14px">Verifica que esté bien escrito. La guía tiene la forma <strong>TF</strong> seguida de 12 caracteres, por ejemplo TFA1B2C3D4E5F6.</p>
             <p style="margin:0;font-size:13px;color:rgba(29,31,32,.5)">Consultaste: {{ q }}</p>
             <code style="display:block;margin-top:10px;font-size:11px;color:rgba(29,31,32,.45)">{{ diag }}</code>
+            <sc-if value="{{ puedeReimprimir }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px">
+                <button onClick="{{ reimprimirComprobante }}" class="btn btn-secondary">Reimprimir comprobante</button>
+                <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                  <span role="status" style="font-size:12px;color:#7a3606">{{ copied }}</span>
+                </sc-if>
+              </div>
+            </sc-if>
           </div>
         </sc-if>
 
@@ -413,7 +421,15 @@ a:hover { color: #f4711a; }
           <div class="blueprint" style="padding:22px;max-width:620px;border-color:#f4711a;background:#fdeee1">
             <h4 style="margin:0 0 4px;color:#7a3606">No pudimos contactar el servicio</h4>
             <p style="margin:0 0 12px;font-size:13px;color:#7a3606">{{ netError }}</p>
-            <button onClick="{{ retry }}" class="btn btn-secondary">Reintentar</button>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button onClick="{{ retry }}" class="btn btn-secondary">Reintentar</button>
+              <sc-if value="{{ puedeReimprimir }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ reimprimirComprobante }}" class="btn btn-secondary">Reimprimir comprobante</button>
+              </sc-if>
+              <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                <span role="status" style="font-size:12px;color:#7a3606">{{ copied }}</span>
+              </sc-if>
+            </div>
           </div>
         </sc-if>
 
@@ -2609,10 +2625,13 @@ class Component extends DCLogic {
     if (c) this.copy(c.trackingNumber, 'Número copiado');
   };
   reimprimirComprobante = async () => {
+    // Si la API 2 no encontró el envío, se usa el número que se buscó: la API 1 es
+    // la dueña del registro y puede tenerlo aunque el rastreo todavía no.
     const t = this.state.tracking;
-    if (!t) return;
+    const numero = t && t.trackingNumber ? t.trackingNumber : this.state.q;
+    if (!numero || !TN_RE.test(numero)) return;
     try {
-      const r = await this.api('/api/shipments/' + encodeURIComponent(t.trackingNumber) + '/receipt', { timeout: 45000 });
+      const r = await this.api('/api/shipments/' + encodeURIComponent(numero) + '/receipt', { timeout: 45000 });
       if (r.status === 401) return;
       if (r.status === 404) return this.avisar('El envío aún se está registrando o no existe; intenta en unos segundos');
       if (!r.ok) return this.avisar('No se pudo obtener el comprobante.');

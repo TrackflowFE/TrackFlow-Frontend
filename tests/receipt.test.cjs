@@ -135,6 +135,37 @@ test('un 404 al reimprimir avisa y no imprime', async () => {
   assert.match(app.state.copied, /aún se está registrando o no existe/);
 });
 
+test('si el rastreo da 404, la reimpresión usa el número buscado y la API 1 responde', async () => {
+  const { app, printed, requests } = setup();
+  app.state.token = 'jwt-operador';
+  app.state.roles = 'OPERADOR';
+  app.state.notFound = true;
+  app.state.tracking = null;
+  app.state.q = 'TFCACE109672DD';
+
+  await app.reimprimirComprobante();
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://api.example/api/shipments/TFCACE109672DD/receipt');
+  assert.equal(printed.count, 1);
+  assert.deepEqual(app.state.comprobante, RECEIPT);
+});
+
+test('la reimpresión no se ofrece sin sesión y se ignora un número mal formado', async () => {
+  const anonimo = setup();
+  anonimo.app.state.q = 'TFCACE109672DD';
+  assert.equal(anonimo.app.renderVals().puedeReimprimir, false);
+
+  const { app, printed, requests } = setup();
+  app.state.token = 'jwt-operador';
+  app.state.roles = 'ADMIN';
+  app.state.q = 'no-es-guia';
+  assert.equal(app.renderVals().puedeReimprimir, true);
+  await app.reimprimirComprobante();
+  assert.equal(requests.length, 0);
+  assert.equal(printed.count, 0);
+});
+
 test('copiar confirma el número y avisa si el portapapeles falla', async () => {
   const { app } = setup();
   app.state.created = { trackingNumber: RECEIPT.trackingNumber };
