@@ -65,7 +65,9 @@ test('sin dirección, un envío entregado muestra la ciudad', () => {
   const app = setup();
   app.state.tracking = { trackingNumber: 'TF0123456789AB', status: 'DELIVERED', destinationCity: 'Medellin' };
 
-  assert.equal(app.renderVals().t_ultimoPunto, 'Entregado en Medellin');
+  assert.equal(app.renderVals().t_ubicLabel, 'Entregado en');
+  assert.equal(app.renderVals().t_ultimoPunto, 'Medellin');
+  assert.equal(app.renderVals().t_ubicSub, '');
 });
 
 test('un 429 del rastreo muestra el tiempo de espera', async () => {
