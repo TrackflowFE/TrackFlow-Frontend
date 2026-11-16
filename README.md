@@ -10,7 +10,7 @@ Prototipo funcional del frontend de TrackFlow (Fábrica Escuela, UdeA 2026-2). C
 
 | Pantalla | Acceso | Historia |
 |---|---|---|
-| Rastrear envío: estado, pasos y línea de tiempo | Público | HU-03, HU-04, HU-14 |
+| Rastrear envío: estado, pasos y línea de tiempo | Público (datos mínimos) | HU-03, HU-04, HU-14 |
 | Registrar envío | Operador | HU-01, HU-14 |
 | Registrar evento logístico | Operador | HU-02 |
 | Solicitar recogida a domicilio | Público / Operador | HU-20 |
@@ -82,6 +82,9 @@ El plan gratuito de Render duerme el servicio: la primera consulta puede tardar 
 - Un envío recogido puede aparecer como `IN_CUSTODY` y su historial como `PICKED_UP`. El paso de custodia solo se muestra si existe ese estado o movimiento. Si la recogida se completa sin guía, la custodia comienza al vincularla.
 - **Comprobante (HU-14):** al registrar, la confirmación permite imprimir el comprobante y copiar el número con aviso de éxito o de error. El comprobante es una sola plantilla que se usa para imprimir y reimprimir: número, código de barras Code 128, fecha, origen, destino, destinatario y remitente. Al imprimir solo se ve ese bloque, en la mitad superior de una hoja carta y en blanco y negro (NFR-20); no muestra teléfono ni dirección (NFR-21).
 - La reimpresión aparece en el resultado del rastreo cuando hay sesión de operador o administrador (`GET /api/shipments/{numero}/receipt`, ruta de la API 1). Un 404 avisa de que el envío aún se está registrando o no existe. Si el portapapeles falla, se pide seleccionar el número manualmente.
+- **Fechas de los reportes:** el formulario pide `GET /api/reports/period-limits` y pone `minDate` como fecha mínima; un periodo anterior al inicio de la operación o de más de `maxDays` días se rechaza antes de llamar a la API. Si la consulta de límites falla, el formulario sigue funcionando y muestra el `detail` del 400 del servidor.
+- **Retrasos en días y horas:** la pantalla de envíos retrasados muestra "86 d 4 h de 1 d esperadas" y "+85 d 4 h" usando los textos que envía la API; con una respuesta antigua que solo trae horas, los calcula en el navegador con la misma regla. Los tramos de ruta siguen en horas.
+- **Privacidad del rastreo:** el rastreo sigue siendo público, pero sin sesión la API devuelve los nombres enmascarados y sin dirección; la pantalla avisa "Por privacidad, los nombres se muestran parcialmente" y, en un envío entregado sin dirección, muestra "Entregado en <ciudad>". Con sesión de operador la consulta va con token y se ve la respuesta completa. Un 429 muestra "Demasiadas consultas; espera N segundos".
 
 ## Pruebas
 
