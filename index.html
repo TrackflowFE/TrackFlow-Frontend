@@ -1598,7 +1598,7 @@ class Component extends DCLogic {
     // HU-08: si el servidor rechaza el token (sesión cerrada, vencida o inactiva más de
     // 30 min), se descarta y se lleva al login con la explicación.
     if (res.status === 401 && conToken && !opts.silencioso) this.sesionTerminada();
-    return { ok: res.ok, status: res.status, data };
+    return { ok: res.ok, status: res.status, data, retryAfter: res.headers.get('Retry-After') };
   }
 
   sesionTerminada() {
@@ -1824,11 +1824,18 @@ class Component extends DCLogic {
       const r = await this.api('/api/pickups/' + (selfService ? 'self-service/' : '') + encodeURIComponent(number), { timeout: 45000, publico: selfService, codigoGestion: code });
       if (session !== this._pickupSession || request !== this._pickupDetailRequest) return;
       if (r.status === 401 && !selfService) return this.setState({ pickupLoading: false });
-      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 404 ? 'No se encontró la recogida o el código no coincide. Si acaba de solicitarse, espera y vuelve a consultar.' : r.status === 429 ? 'Demasiados intentos. Espera antes de volver a consultar.' : 'No se pudo consultar la recogida.'));
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 404 ? 'No se encontró la recogida o el código no coincide. Si acaba de solicitarse, espera y vuelve a consultar.' : r.status === 429 ? 'Demasiados intentos. ' + this.esperaDeReintento(r) : 'No se pudo consultar la recogida.'));
       this.setState({ pickupLoading: false, pickupDetail: r.data, pickupCode: code });
     } catch (e) { if (session === this._pickupSession && request === this._pickupDetailRequest) this.setState({ pickupLoading: false, pickupCode: '', pickupError: e.message }); }
   }
   refrescarPickup = () => { if (this.state.pickupDetail) this.consultarPickup(this.state.pickupDetail.pickupNumber); };
+  // La API responde 429 con Retry-After: el tiempo que falta para que se libere la cuota.
+  esperaDeReintento = (r) => {
+    const segundos = Number(r && r.retryAfter);
+    if (!Number.isFinite(segundos) || segundos <= 0) return 'Espera antes de volver a intentarlo.';
+    const minutos = Math.max(1, Math.ceil(segundos / 60));
+    return 'Espera ' + minutos + (minutos === 1 ? ' minuto' : ' minutos') + ' antes de volver a intentarlo.';
+  };
   submitPickup = async (e) => {
     e.preventDefault();
     if (this.state.pickupBusy) return;
@@ -1890,7 +1897,7 @@ class Component extends DCLogic {
       const r = await this.api('/api/pickups/' + (selfService ? 'self-service/' : '') + encodeURIComponent(number) + '/' + action, { method, body, timeout: 45000, publico: selfService, codigoGestion: selfService ? this.state.pickupCode : '' });
       if (session !== this._pickupSession || (selfService && request !== this._pickupDetailRequest)) return;
       if (r.status === 401 && !selfService) return this.setState({ pickupBusy: false });
-      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 429 ? 'Demasiados intentos. Espera antes de volver a intentar.' : 'No se pudo procesar la operación.'));
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 429 ? 'Demasiados intentos. ' + this.esperaDeReintento(r) : 'No se pudo procesar la operación.'));
       this.setState({ pickupBusy: false, pickupNotice: 'Operación aceptada y en procesamiento. Actualiza el detalle para confirmar el estado.' });
     } catch (err) { if (session === this._pickupSession && (!selfService || request === this._pickupDetailRequest)) this.setState({ pickupBusy: false, pickupError: err.message }); }
   }
