@@ -50,6 +50,8 @@ a:hover { color: #f4711a; }
         <tr><td><strong>Resultado</strong></td><td>Público</td><td>Resumen del envío (guía, estado, destino, registro, último punto y movimiento) y línea de tiempo vertical de eventos.</td></tr>
         <tr><td><strong>Registrar envío</strong></td><td>Operador</td><td>Remitente y destinatario en columnas paralelas, más descripción. Confirmación con la guía generada.</td></tr>
         <tr><td><strong>Registrar evento</strong></td><td>Operador</td><td>Movimiento sobre un envío existente: el tipo y el centro se eligen de las acciones que el backend permite en ese momento; repartidor obligatorio al salir a reparto; observaciones y fecha opcionales.</td></tr>
+        <tr><td><strong>Solicitar recogida</strong></td><td>Operador</td><td>Ciudad, dirección, contacto, fecha y franja, tamaño, peso y guía opcional. El horario se consulta en API 1 y la respuesta entrega el número RC.</td></tr>
+        <tr><td><strong>Recogidas</strong></td><td>Operador</td><td>Listado por estado, búsqueda por número, historial y acciones de programación, asignación, cancelación, despacho, completado y vinculación de guía. El domicilio solo se muestra al asignado.</td></tr>
         <tr><td><strong>Ingresar</strong></td><td>Público</td><td>Un solo formulario para operador y admin. El rol lo decide el backend. Si la sesión se cerró o venció, la UI vuelve aquí con el aviso "Sesión terminada".</td></tr>
         <tr><td><strong>Admin</strong></td><td>Rol ADMIN</td><td>Reconstruir proyecciones. El item del nav solo aparece si el token trae ADMIN.</td></tr>
       </tbody>
@@ -82,7 +84,8 @@ a:hover { color: #f4711a; }
       <li><strong>El contrato está en inglés</strong> (rutas, campos y valores); los mensajes para el usuario siguen en español.</li>
       <li>La ciudad es siempre un <code>cityId</code> numérico elegido por autocompletado, nunca texto libre.</li>
       <li><code>documentType</code> y <code>documentNumber</code> son campos separados, con validación por tipo.</li>
-      <li>No existe editar ni borrar: no hay PUT, PATCH ni DELETE. Corregir un error significa registrar un evento nuevo.</li>
+      <li>Los envíos y eventos no se editan ni borran. Las recogidas admiten comandos PUT para programación y vinculación de guía.</li>
+      <li>HU-20 usa API 1: <code>GET /api/pickups/operating-hours</code> es público; <code>GET /api/pickups</code>, <code>/assignees</code> y <code>/{numero}</code> son de operador. <code>POST /api/pickups</code> crea; <code>PUT /{numero}/schedule</code> reprograma y asigna; <code>POST /{numero}/cancel</code>, <code>/dispatch</code>, <code>/complete</code> y <code>PUT /{numero}/shipment</code> publican comandos. Se debe actualizar tras un 202 para confirmar el resultado.</li>
       <li>Las consultas del cliente (tracking, historial, ciudades) son públicas y se llaman <strong>sin token</strong>. Las de la operación (acciones disponibles, centros, reportes) exigen token de operador.</li>
       <li>Todos los errores llegan en formato ProblemDetail (<code>title</code>, <code>detail</code>, <code>status</code>), incluido el 404 de tracking.</li>
       <li>Todo error 400 trae un <code>detail</code> legible; la UI lo muestra tal cual, sin reemplazarlo por texto genérico.</li>

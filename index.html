@@ -25,7 +25,8 @@ a:hover { color: #f4711a; }
   .tf-main-inner { padding: 28px 16px 48px !important; }
   .tf-app-header { padding: 12px 16px !important; gap: 10px !important; }
   .tf-app-logo { height: 34px !important; }
-  .tf-app-nav { display: none !important; }
+  .tf-app-nav { display: flex !important; }
+  .tf-app-header { flex-wrap: wrap; }
   .tf-event-hero { margin: -28px -16px 24px !important; padding: 28px 18px 26px !important; }
   .tf-event-hero h1 { font-size: 36px !important; max-width: 10ch !important; }
   .tf-event-layout { grid-template-columns: 1fr !important; gap: 18px !important; }
@@ -210,6 +211,8 @@ a:hover { color: #f4711a; }
         <sc-if value="{{ opsOpen }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:#f7f7f8;border:1px solid rgba(29,31,32,.3);box-shadow:var(--shadow-md);z-index:40;display:flex;flex-direction:column">
             <button onClick="{{ goNuevo }}" style="text-align:left;padding:11px 14px;background:none;border:0;cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar envío</button>
+            <button onClick="{{ goRecogida }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20">Solicitar recogida</button>
+            <button onClick="{{ goRecogidas }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20">Recogidas</button>
             <button onClick="{{ goEvento }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar evento</button>
             <button onClick="{{ goReporte }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Volumen de envíos</button>
                         <button onClick="{{ goRetrasados }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Envíos retrasados</button>
@@ -399,7 +402,7 @@ a:hover { color: #f4711a; }
               <h3 style="margin:18px 0 3px;font-size:21px;letter-spacing:.02em">{{ frase }}</h3>
               <p style="margin:0;font-size:13px;color:rgba(29,31,32,.62)">{{ fraseSub }}</p>
 
-              <div class="tf-stepper-grid" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin:24px 0 4px">
+              <div class="tf-stepper-grid" style="{{ pasosGrid }}">
                 <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="6">
                   <div style="display:flex;flex-direction:column;align-items:center;text-align:center">
                     <div style="position:relative;width:100%;height:30px;display:flex;align-items:center;justify-content:center">
@@ -1256,6 +1259,69 @@ a:hover { color: #f4711a; }
       </section>
     </sc-if>
 
+    <!-- ══ RECOGIDAS ══ -->
+    <sc-if value="{{ isRecogida }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Operaciones / Recogida a domicilio</div>
+        <h1 style="margin:0 0 8px">Solicitar recogida</h1>
+        <p>Registra la visita por el remitente. La dirección y el contacto solo serán visibles para el operador asignado.</p>
+        <sc-if value="{{ pickupCreated }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-status-success" role="status"><div><strong>Solicitud aceptada: {{ pickupCreatedNumber }}</strong><div>Estado: {{ pickupCreatedStatus }}. La recogida se está procesando; puede tardar en aparecer.</div><sc-if value="{{ pickupCreatedGuide }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ verGuiaRecogida }}">Rastrear guía {{ pickupCreatedGuide }}</button></sc-if><button class="btn" onClick="{{ nuevaRecogida }}">Nueva solicitud</button></div></div>
+        </sc-if>
+        <sc-if value="{{ showPickupForm }}" hint-placeholder-val="{{ true }}">
+          <form onSubmit="{{ submitPickup }}" noValidate="{{ true }}" class="tf-panel" style="padding:24px;display:grid;gap:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+              <div class="field" style="position:relative"><label>Ciudad de recogida *</label><input class="input" value="{{ pickupCityText }}" onChange="{{ onPickupCity }}" autoComplete="off" placeholder="Escribe para buscar">
+                <sc-if value="{{ pickupCityOpen }}" hint-placeholder-val="{{ false }}"><ul style="position:absolute;z-index:10;top:100%;left:0;right:0;margin:0;padding:0;list-style:none;background:#fff;border:1px solid #999;max-height:200px;overflow:auto"><sc-for list="{{ pickupCities }}" as="c"><li><button type="button" onClick="{{ c.pick }}" style="width:100%;text-align:left;padding:10px;border:0;background:none;cursor:pointer">{{ c.etiqueta }}</button></li></sc-for></ul></sc-if>
+              </div>
+              <div class="field"><label>Dirección *</label><input class="input" name="address" maxLength="200" required></div>
+              <div class="field"><label>Nombre de contacto *</label><input class="input" name="contactName" maxLength="120" required></div>
+              <div class="field"><label>Teléfono de contacto *</label><input class="input" name="contactPhone" inputMode="numeric" required></div>
+              <div class="field"><label>Fecha *</label><input class="input" name="scheduledDate" type="date" required></div>
+              <div class="field"><label>Franja horaria *</label><select class="input" name="timeSlot" required><option value="">Selecciona una franja</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div>
+              <div class="field"><label>Tamaño del paquete *</label><select class="input" name="packageSize" required><option value="">Selecciona</option><option value="SMALL">Pequeño</option><option value="MEDIUM">Mediano</option><option value="LARGE">Grande</option></select></div>
+              <div class="field"><label>Peso aproximado (kg) *</label><input class="input" name="weightKg" type="number" min="0.1" max="100" step="0.01" required></div>
+              <div class="field"><label>Guía vinculada (opcional)</label><input class="input" name="shipmentTrackingNumber" placeholder="TFA1B2C3D4E5F6"></div>
+            </div>
+            <p class="tf-muted-note">{{ pickupHoursText }}</p>
+            <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
+            <button type="submit" class="btn btn-primary" disabled="{{ pickupBusy }}" style="justify-self:start;background:#f4711a;border-color:#f4711a;color:#fff">Solicitar recogida</button>
+          </form>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{ isRecogidas }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Operaciones / Recogidas</div><h1 style="margin:0 0 8px">Consultar recogidas</h1>
+        <p>Busca por número o filtra el listado. Actualiza para consultar el resultado de los comandos encolados.</p>
+        <div class="tf-panel" style="padding:20px;display:grid;gap:16px">
+          <form onSubmit="{{ buscarPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="pickupNumber" placeholder="RC seguido de 12 caracteres" style="flex:1;min-width:220px"><button class="btn btn-primary" type="submit">Buscar</button></form>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label for="pickup-filter">Estado</label><select id="pickup-filter" class="input" value="{{ pickupFilter }}" onChange="{{ filtrarPickups }}" style="width:auto"><option value="">Todos</option><option value="REQUESTED">Solicitada</option><option value="SCHEDULED">Programada</option><option value="ON_THE_WAY">En camino</option><option value="PICKED_UP">Recogida</option><option value="CANCELLED">Cancelada</option></select><button class="btn" onClick="{{ actualizarPickups }}">Actualizar listado</button></div>
+          <sc-if value="{{ pickupNotice }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info" role="status">{{ pickupNotice }}</div></sc-if>
+          <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
+          <sc-if value="{{ pickupLoading }}" hint-placeholder-val="{{ false }}"><p>Cargando recogidas…</p></sc-if>
+          <div style="display:grid;gap:8px"><sc-for list="{{ pickupRows }}" as="row"><button class="btn" onClick="{{ row.open }}" style="text-align:left;white-space:normal">{{ row.label }}</button></sc-for></div>
+        </div>
+        <sc-if value="{{ pickupDetail }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="padding:24px;margin-top:18px;display:grid;gap:14px">
+            <div><h2 style="margin:0">{{ pdNumber }}</h2><strong>{{ pdStatus }}</strong> · {{ pdCity }} · {{ pdDate }} · {{ pdSlot }}</div>
+            <div>Paquete: {{ pdSize }} · {{ pdWeight }} kg · Asignado: {{ pdAssignee }} · Guía: {{ pdGuide }}</div>
+            <sc-if value="{{ pdRestricted }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">Dirección y contacto no visibles para su usuario</div></sc-if>
+            <sc-if value="{{ pdVisible }}" hint-placeholder-val="{{ false }}"><div>Dirección: {{ pdAddress }}<br>Contacto: {{ pdContact }} · {{ pdPhone }}</div></sc-if>
+            <button class="btn" onClick="{{ refrescarPickup }}" style="justify-self:start">Actualizar detalle</button>
+            <sc-if value="{{ pdCanSchedule }}" hint-placeholder-val="{{ false }}">
+              <form onSubmit="{{ programarPickup }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;align-items:end"><div class="field"><label>Fecha</label><input class="input" type="date" name="scheduledDate" defaultValue="{{ pdDate }}"></div><div class="field"><label>Franja</label><select class="input" name="timeSlot" defaultValue="{{ pdSlot }}"><option value="">Selecciona</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div><div class="field"><label>Asignar operador</label><select class="input" name="assignedUsername" defaultValue="{{ pdAssigneeValue }}"><option value="">Sin cambiar asignación</option><sc-for list="{{ pickupAssignees }}" as="user"><option value="{{ user.value }}">{{ user.value }}</option></sc-for></select></div><button class="btn" type="submit" disabled="{{ pickupBusy }}">Reprogramar / asignar</button></form>
+              <form onSubmit="{{ cancelarPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="reason" maxLength="200" placeholder="Motivo de cancelación (opcional)" style="flex:1;min-width:200px"><button class="btn" type="submit" disabled="{{ pickupBusy }}">Cancelar recogida</button></form>
+            </sc-if>
+            <sc-if value="{{ pdCanDispatch }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ despacharPickup }}" disabled="{{ pickupBusy }}" style="justify-self:start">Despachar</button></sc-if>
+            <sc-if value="{{ pdCanComplete }}" hint-placeholder-val="{{ false }}"><button class="btn btn-primary" onClick="{{ completarPickup }}" disabled="{{ pickupBusy }}" style="justify-self:start">Completar recogida</button></sc-if>
+            <sc-if value="{{ pdCanLink }}" hint-placeholder-val="{{ false }}"><form onSubmit="{{ vincularPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="trackingNumber" placeholder="Guía TF…" style="flex:1;min-width:200px"><button class="btn" type="submit" disabled="{{ pickupBusy }}">Vincular guía</button></form></sc-if>
+            <h3 style="margin:8px 0 0">Historial</h3><sc-for list="{{ pdHistory }}" as="event"><div style="border-top:1px solid #ddd;padding-top:8px">{{ event.label }}</div></sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <!-- ══ ADMIN ══ -->
     <sc-if value="{{ isAdminScreen }}" hint-placeholder-val="{{ false }}">
       <section style="max-width:640px">
@@ -1286,6 +1352,7 @@ a:hover { color: #f4711a; }
 <script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;},&quot;reportsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-reports-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 2: Reportes&quot;},&quot;shipmentsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-envios-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 1: Envíos&quot;},&quot;logisticsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-logistics.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 3: Logística&quot;}}">
 const ESTADOS = {
   REGISTERED: ['Registrado', '#e7e7ea', '#424244', 'rgba(29,31,32,.3)'],
+  IN_CUSTODY: ['En custodia', '#e9f0fa', '#0e2646', '#1b4b8f'],
   AT_DISTRIBUTION_CENTER: ['En centro de origen', '#e9f0fa', '#0e2646', '#1b4b8f'],
   IN_TRANSIT: ['En tránsito', '#e9f0fa', '#0e2646', '#1b4b8f'],
   AT_DESTINATION_CENTER: ['En centro de destino', '#e9f0fa', '#0e2646', '#1b4b8f'],
@@ -1293,6 +1360,7 @@ const ESTADOS = {
   DELIVERED: ['Entregado', '#e2f2e6', '#1c5130', '#2f7d4f']
 };
 const TIPOS = {
+  PICKED_UP: 'Recogido a domicilio',
   RECEIVED_AT_CENTER: 'Recibido en centro',
   DISPATCHED: 'Despachado',
   ARRIVED_AT_DESTINATION_CENTER: 'Llegada al centro destino',
@@ -1301,6 +1369,7 @@ const TIPOS = {
 };
 const PASOS = [
   ['REGISTERED', 'Registrado', 'Registrado y pendiente de recolección', 'El envío fue registrado y está pendiente de recolección.'],
+  ['IN_CUSTODY', 'Custodia', 'En custodia de la empresa', 'El paquete fue recogido en la dirección del remitente y está en custodia de la empresa.'],
   ['AT_DISTRIBUTION_CENTER', 'Centro origen', 'En el centro de origen', 'El paquete fue recibido en el centro de origen y está siendo clasificado.'],
   ['IN_TRANSIT', 'Tránsito', 'En camino a la ciudad de destino', 'El paquete va en camino a la ciudad de destino.'],
   ['AT_DESTINATION_CENTER', 'Centro destino', 'Llegó al centro de destino', 'El paquete llegó al centro de la ciudad de destino.'],
@@ -1315,6 +1384,30 @@ const DOC_HINTS = {
   NIT: 'NIT: 9 o 10 dígitos, opcionalmente con dígito de verificación (890903938-8).'
 };
 const TN_RE = /^TF[A-Z0-9]{12}$/;
+const PICKUP_RE = /^RC[A-Z0-9]{12}$/;
+const PICKUP_STATES = { REQUESTED: 'Solicitada', SCHEDULED: 'Programada', ON_THE_WAY: 'En camino', PICKED_UP: 'Recogida', CANCELLED: 'Cancelada' };
+
+function validarHorarioRecogida(date, slot, hours, now = new Date()) {
+  if (!hours || !Array.isArray(hours.slots) || !Array.isArray(hours.days) || !hours.timeZone) return 'No se pudo cargar el horario de recogidas.';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Selecciona una fecha válida.';
+  const day = new Date(date + 'T00:00:00Z');
+  if (isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) return 'Selecciona una fecha válida.';
+  if (!hours.slots.includes(slot)) return 'Selecciona una franja del horario de atención.';
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: hours.timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  const today = p.year + '-' + p.month + '-' + p.day;
+  const todayMs = Date.parse(today + 'T00:00:00Z');
+  const delta = (day.getTime() - todayMs) / 86400000;
+  if (delta < 0) return 'La fecha de la recogida ya pasó.';
+  if (!hours.days.includes(day.getUTCDay() || 7)) return 'No se recoge ese día.';
+  if (delta > hours.horizonDays) return 'La fecha está fuera del horizonte de programación.';
+  if (delta === 0) {
+    const start = slot.slice(0, 5).split(':').map(Number);
+    const seconds = start[0] * 3600 + start[1] * 60;
+    if (seconds * 1000 < (Number(p.hour) * 3600 + Number(p.minute) * 60 + Number(p.second) + hours.leadTimeHours * 3600) * 1000 + now.getUTCMilliseconds()) return 'No hay tiempo suficiente para programar esa franja.';
+  }
+  return '';
+}
 
 // Claves en inglés: así las devuelve el backend en missingFields (contrato en inglés).
 const FIELD_MAP = {
@@ -1361,11 +1454,14 @@ class Component extends DCLogic {
       loginSubmitting: false, loginError: '', loginErrorTitle: '',
       adminLoading: false, adminResult: null, adminError: '',
       repDesde: '', repHasta: '', repPreset: '', repLoading: false, repData: null, repError: '', repErrorTitle: '', retData: null, retLoading: false, retError: '', retErrorTitle: '',
-      tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: ''
+      tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: '',
+      pickupCityText: '', pickupCityId: null, pickupCities: [], pickupOpen: false, pickupHours: null,
+      pickupCreated: null, pickupCreatedGuide: '', pickupError: '', pickupNotice: '', pickupBusy: false,
+      pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: []
     };
   }
 
-  componentWillUnmount() { document.removeEventListener('mousedown', this.onDocDown, true); }
+  componentWillUnmount() { document.removeEventListener('mousedown', this.onDocDown, true); clearTimeout(this._ct_pickup); }
   componentDidMount() {
     document.addEventListener('mousedown', this.onDocDown, true);
     try {
@@ -1385,12 +1481,15 @@ class Component extends DCLogic {
   }
 
   olvidarSesion() {
+    this._pickupSession = (this._pickupSession || 0) + 1;
+    clearTimeout(this._ct_pickup);
     try { localStorage.removeItem('tf_token'); localStorage.removeItem('tf_roles'); } catch (e) {}
     // Se borran también los datos operativos en pantalla: tras cerrar sesión no debe
     // quedar nada de la operación visible (ni volviendo con el botón atrás).
     this.setState({ token: null, roles: '', usuario: '', created: null, evCtx: null, acciones: [], ubicacionActual: null,
       tipoSel: '', centroId: null, evOk: null, evClave: null, adminResult: null, opsOpen: false, userOpen: false,
-      repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '' });
+      repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '',
+      pickupCreated: null, pickupCreatedGuide: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
   }
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
@@ -1400,7 +1499,7 @@ class Component extends DCLogic {
     if (/^\/api\/(tracking|reports)(\/|\?|$)/.test(path)) return 'reports';
     if (/^\/api\/centers(\/|\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/(events|route|actions)(\/|\?|$)/.test(path)) return 'logistics';
-    if (/^\/api\/(auth|cities)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)) return 'shipments';
+    if (/^\/api\/(auth|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)) return 'shipments';
     return null;
   }
 
@@ -1459,6 +1558,18 @@ class Component extends DCLogic {
   goHome = () => this.setState({ route: 'home', qError: '' });
   goNuevo = () => this.setState(this.state.token ? { route: 'nuevo', opsOpen: false } : { route: 'login', opsOpen: false });
   goEvento = () => this.setState(this.state.token ? { route: 'evento', opsOpen: false } : { route: 'login', opsOpen: false });
+  goRecogida = () => {
+    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
+    this.setState({ route: 'recogida', opsOpen: false, pickupError: '', pickupNotice: '' });
+    this.cargarHorarioPickup();
+  };
+  goRecogidas = () => {
+    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
+    this.setState({ route: 'recogidas', opsOpen: false, pickupError: '', pickupNotice: '', pickupDetail: null });
+    this.cargarHorarioPickup();
+    this.cargarAsignablesPickup();
+    this.cargarPickups(this.state.pickupFilter);
+  };
   toggleOps = () => this.setState(s => ({ opsOpen: !s.opsOpen }));
   closeOps = () => this.setState({ opsOpen: false });
   opsRef = React.createRef();
@@ -1570,18 +1681,21 @@ class Component extends DCLogic {
 
   // ── ciudades ──
   searchCities = (which, text) => {
-    const key = which === 'rem' ? 'remCityText' : 'desCityText';
-    const idKey = which === 'rem' ? 'remCityId' : 'desCityId';
-    const openKey = which === 'rem' ? 'remOpen' : 'desOpen';
+    const key = which + 'CityText';
+    const idKey = which + 'CityId';
+    const openKey = which + 'Open';
     this.setState({ [key]: text, [idKey]: null, [openKey]: true });
     this.clearFieldError(which + '_city');
     clearTimeout(this['_ct_' + which]);
     if (!text.trim()) return this.setState({ [which + 'Cities']: [] });
     this['_ct_' + which] = setTimeout(async () => {
+      const session = this._pickupSession;
       try {
         const r = await this.api('/api/cities?q=' + encodeURIComponent(text.trim()) + '&onlyCovered=true', { timeout: 6000, publico: true });
+        if (which === 'pickup' && (session !== this._pickupSession || this.state.pickupCityText !== text)) return;
         this.setState({ [which + 'Cities']: Array.isArray(r.data) ? r.data : [] });
       } catch (e) {
+        if (which === 'pickup' && (session !== this._pickupSession || this.state.pickupCityText !== text)) return;
         this.setState({ [which + 'Cities']: [] });
       }
     }, 220);
@@ -1590,6 +1704,110 @@ class Component extends DCLogic {
     this.setState({ [which + 'CityText']: c.label, [which + 'CityId']: c.id, [which + 'Open']: false });
     this.clearFieldError(which + '_city');
   };
+
+  async cargarHorarioPickup() {
+    try {
+      const r = await this.api('/api/pickups/operating-hours', { publico: true, timeout: 45000 });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo cargar el horario de recogidas.');
+      this.setState({ pickupHours: r.data });
+    } catch (e) { this.setState({ pickupHours: null, pickupError: e.message }); }
+  }
+  async cargarAsignablesPickup() {
+    const session = this._pickupSession;
+    try {
+      const r = await this.api('/api/pickups/assignees');
+      if (session !== this._pickupSession) return;
+      if (r.status === 401) return;
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudieron cargar los operadores.');
+      this.setState({ pickupAssignees: Array.isArray(r.data) ? r.data : [] });
+    } catch (e) { if (session === this._pickupSession) this.setState({ pickupAssignees: [], pickupError: e.message }); }
+  }
+  async cargarPickups(status) {
+    const session = this._pickupSession, request = this._pickupListRequest = (this._pickupListRequest || 0) + 1;
+    this.setState({ pickupLoading: true, pickupError: '' });
+    try {
+      const r = await this.api('/api/pickups' + (status ? '?status=' + encodeURIComponent(status) : ''), { timeout: 45000 });
+      if (session !== this._pickupSession || request !== this._pickupListRequest) return;
+      if (r.status === 401) return this.setState({ pickupLoading: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudieron consultar las recogidas.');
+      this.setState({ pickupLoading: false, pickupList: Array.isArray(r.data) ? r.data : [] });
+    } catch (e) { if (session === this._pickupSession && request === this._pickupListRequest) this.setState({ pickupLoading: false, pickupList: [], pickupError: e.message }); }
+  }
+  actualizarPickups = () => this.cargarPickups(this.state.pickupFilter);
+  filtrarPickups = (e) => { const status = e.target.value; this.setState({ pickupFilter: status }); this.cargarPickups(status); };
+  buscarPickup = (e) => {
+    e.preventDefault();
+    const number = String(new FormData(e.target).get('pickupNumber') || '').trim().toUpperCase();
+    if (!PICKUP_RE.test(number)) return this.setState({ pickupDetail: null, pickupError: 'El número debe ser RC seguido de 12 caracteres alfanuméricos.' });
+    this.consultarPickup(number);
+  };
+  async consultarPickup(number) {
+    const session = this._pickupSession, request = this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    this.setState({ pickupLoading: true, pickupError: '', pickupDetail: null });
+    try {
+      const r = await this.api('/api/pickups/' + encodeURIComponent(number), { timeout: 45000 });
+      if (session !== this._pickupSession || request !== this._pickupDetailRequest) return;
+      if (r.status === 401) return this.setState({ pickupLoading: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 404 ? 'No se encontró la recogida. Si acaba de solicitarse, espera y vuelve a consultar.' : 'No se pudo consultar la recogida.'));
+      this.setState({ pickupLoading: false, pickupDetail: r.data });
+    } catch (e) { if (session === this._pickupSession && request === this._pickupDetailRequest) this.setState({ pickupLoading: false, pickupError: e.message }); }
+  }
+  refrescarPickup = () => { if (this.state.pickupDetail) this.consultarPickup(this.state.pickupDetail.pickupNumber); };
+  submitPickup = async (e) => {
+    e.preventDefault();
+    if (this.state.pickupBusy) return;
+    const session = this._pickupSession;
+    const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
+    const body = { address: v('address'), cityId: this.state.pickupCityId, contactName: v('contactName'), contactPhone: v('contactPhone'), scheduledDate: v('scheduledDate'), timeSlot: v('timeSlot'), packageSize: v('packageSize'), weightKg: Number(v('weightKg')), shipmentTrackingNumber: v('shipmentTrackingNumber').toUpperCase() || null };
+    const error = !body.cityId ? 'Selecciona una ciudad de la lista.'
+      : body.address.length < 5 || body.address.length > 200 ? 'La dirección debe tener entre 5 y 200 caracteres.'
+      : body.contactName.length < 3 || body.contactName.length > 120 ? 'El nombre debe tener entre 3 y 120 caracteres.'
+      : !/^[0-9]{7,20}$/.test(body.contactPhone) ? 'El teléfono debe tener entre 7 y 20 dígitos.'
+      : !['SMALL', 'MEDIUM', 'LARGE'].includes(body.packageSize) ? 'Selecciona el tamaño del paquete.'
+      : !Number.isFinite(body.weightKg) || body.weightKg < 0.1 || body.weightKg > 100 ? 'El peso debe estar entre 0.1 y 100 kg.'
+      : body.shipmentTrackingNumber && !TN_RE.test(body.shipmentTrackingNumber) ? 'La guía debe ser TF seguida de 12 caracteres alfanuméricos.'
+      : validarHorarioRecogida(body.scheduledDate, body.timeSlot, this.state.pickupHours);
+    if (error) return this.setState({ pickupError: error });
+    this.setState({ pickupBusy: true, pickupError: '' });
+    try {
+      const r = await this.api('/api/pickups', { method: 'POST', body, timeout: 45000 });
+      if (session !== this._pickupSession) return;
+      if (r.status === 401) return this.setState({ pickupBusy: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo solicitar la recogida.');
+      this.setState({ pickupBusy: false, pickupCreated: r.data, pickupCreatedGuide: body.shipmentTrackingNumber || '', pickupCityText: '', pickupCityId: null });
+    } catch (err) { if (session === this._pickupSession) this.setState({ pickupBusy: false, pickupError: err.message }); }
+  };
+  nuevaRecogida = () => this.setState({ pickupCreated: null, pickupCreatedGuide: '', pickupError: '' });
+  verGuiaRecogida = () => { const tn = this.state.pickupCreatedGuide; this.setState({ q: tn, route: 'result' }); this.fetchTracking(tn); };
+  programarPickup = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), date = String(f.get('scheduledDate') || ''), slot = String(f.get('timeSlot') || '');
+    const error = validarHorarioRecogida(date, slot, this.state.pickupHours);
+    if (error) return this.setState({ pickupError: error });
+    this.comandoPickup('schedule', 'PUT', { scheduledDate: date, timeSlot: slot, assignedUsername: String(f.get('assignedUsername') || '') || null });
+  };
+  cancelarPickup = (e) => { e.preventDefault(); this.comandoPickup('cancel', 'POST', { reason: String(new FormData(e.target).get('reason') || '').trim() || null }); };
+  despacharPickup = () => this.comandoPickup('dispatch', 'POST');
+  completarPickup = () => this.comandoPickup('complete', 'POST');
+  vincularPickup = (e) => {
+    e.preventDefault();
+    const number = String(new FormData(e.target).get('trackingNumber') || '').trim().toUpperCase();
+    if (!TN_RE.test(number)) return this.setState({ pickupError: 'La guía debe ser TF seguida de 12 caracteres alfanuméricos.' });
+    this.comandoPickup('shipment', 'PUT', { trackingNumber: number });
+  };
+  async comandoPickup(action, method, body) {
+    if (!this.state.pickupDetail || this.state.pickupBusy) return;
+    const session = this._pickupSession;
+    const number = this.state.pickupDetail.pickupNumber;
+    this.setState({ pickupBusy: true, pickupError: '', pickupNotice: '' });
+    try {
+      const r = await this.api('/api/pickups/' + encodeURIComponent(number) + '/' + action, { method, body, timeout: 45000 });
+      if (session !== this._pickupSession) return;
+      if (r.status === 401) return this.setState({ pickupBusy: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo procesar la operación.');
+      this.setState({ pickupBusy: false, pickupNotice: 'Operación aceptada y en procesamiento. Actualiza el detalle para confirmar el estado.' });
+    } catch (err) { if (session === this._pickupSession) this.setState({ pickupBusy: false, pickupError: err.message }); }
+  }
 
   // ── registrar envío ──
   submitShipment = async (e) => {
@@ -2139,10 +2357,11 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state, t = s.tracking;
     const est = t ? (ESTADOS[t.status] || ESTADOS.REGISTERED) : null;
-    const ORDEN = PASOS.map(p => p[0]);
-    const CORTO = PASOS.map(p => p[1]);
+    const pasosVisibles = PASOS.filter(p => p[0] !== 'IN_CUSTODY' || (t && t.status === 'IN_CUSTODY') || (s.events || []).some(e => e.type === 'PICKED_UP'));
+    const ORDEN = pasosVisibles.map(p => p[0]);
+    const CORTO = pasosVisibles.map(p => p[1]);
     const idx = t ? Math.max(0, ORDEN.indexOf(t.status)) : 0;
-    const paso = PASOS[idx];
+    const paso = pasosVisibles[idx];
     const accs = s.acciones || [];
     const accSel = accs.find(a => a.type === s.tipoSel) || null;
     const accCentros = (accSel && accSel.centers) || [];
@@ -2209,6 +2428,30 @@ class Component extends DCLogic {
       ...this.vistaReporte(s),
       ...this.vistaRetrasados(s),
       ...this.vistaTiempos(s),
+      isRecogida: s.route === 'recogida', isRecogidas: s.route === 'recogidas',
+      goRecogida: this.goRecogida, goRecogidas: this.goRecogidas,
+      pickupCityText: s.pickupCityText, pickupCityOpen: s.pickupOpen && !!s.pickupCityText.trim() && !s.pickupCityId,
+      onPickupCity: e => this.searchCities('pickup', e.target.value),
+      pickupCities: s.pickupCities.map(c => ({ etiqueta: c.label, pick: () => this.pickCity('pickup', c) })),
+      pickupSlots: ((s.pickupHours && s.pickupHours.slots) || []).map(value => ({ value })),
+      pickupHoursText: s.pickupHours ? 'Horario: ' + s.pickupHours.open + '–' + s.pickupHours.close + ' (' + s.pickupHours.timeZone + '). Anticipación: ' + s.pickupHours.leadTimeHours + ' horas; horizonte: ' + s.pickupHours.horizonDays + ' días.' : 'Cargando horario de atención.',
+      pickupCreated: !!s.pickupCreated, showPickupForm: !s.pickupCreated,
+      pickupCreatedNumber: s.pickupCreated ? s.pickupCreated.pickupNumber : '', pickupCreatedStatus: s.pickupCreated ? (PICKUP_STATES[s.pickupCreated.status] || s.pickupCreated.status) : '',
+      pickupCreatedGuide: s.pickupCreatedGuide, verGuiaRecogida: this.verGuiaRecogida, nuevaRecogida: this.nuevaRecogida,
+      submitPickup: this.submitPickup, pickupBusy: s.pickupBusy, pickupError: s.pickupError, pickupNotice: s.pickupNotice,
+      pickupLoading: s.pickupLoading, pickupFilter: s.pickupFilter, buscarPickup: this.buscarPickup, filtrarPickups: this.filtrarPickups, actualizarPickups: this.actualizarPickups,
+      pickupRows: s.pickupList.map(p => ({ label: p.pickupNumber + ' · ' + (PICKUP_STATES[p.status] || p.status) + ' · ' + (p.cityName || '') + ' · ' + p.scheduledDate + ' ' + p.timeSlot, open: () => this.consultarPickup(p.pickupNumber) })),
+      pickupDetail: !!s.pickupDetail, refrescarPickup: this.refrescarPickup,
+      pdNumber: s.pickupDetail && s.pickupDetail.pickupNumber, pdStatus: s.pickupDetail && (PICKUP_STATES[s.pickupDetail.status] || s.pickupDetail.status),
+      pdCity: s.pickupDetail && s.pickupDetail.cityName, pdDate: s.pickupDetail && s.pickupDetail.scheduledDate, pdSlot: s.pickupDetail && s.pickupDetail.timeSlot,
+      pdSize: s.pickupDetail && ({ SMALL: 'Pequeño', MEDIUM: 'Mediano', LARGE: 'Grande' }[s.pickupDetail.packageSize] || s.pickupDetail.packageSize), pdWeight: s.pickupDetail && s.pickupDetail.weightKg,
+      pdAssignee: (s.pickupDetail && s.pickupDetail.assignedUsername) || 'Sin asignar', pdAssigneeValue: (s.pickupDetail && s.pickupDetail.assignedUsername) || '', pdGuide: (s.pickupDetail && s.pickupDetail.shipmentTrackingNumber) || 'Sin vincular',
+      pdRestricted: !!(s.pickupDetail && s.pickupDetail.accessRestricted), pdVisible: !!(s.pickupDetail && !s.pickupDetail.accessRestricted),
+      pdAddress: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.address : '', pdContact: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.contactName : '', pdPhone: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.contactPhone : '',
+      pdCanSchedule: !!(s.pickupDetail && ['REQUESTED', 'SCHEDULED'].includes(s.pickupDetail.status)), pdCanDispatch: !!(s.pickupDetail && s.pickupDetail.status === 'SCHEDULED'), pdCanComplete: !!(s.pickupDetail && s.pickupDetail.status === 'ON_THE_WAY'),
+      pdCanLink: !!(s.pickupDetail && s.pickupDetail.status !== 'CANCELLED' && !s.pickupDetail.shipmentTrackingNumber),
+      pdHistory: ((s.pickupDetail && s.pickupDetail.history) || []).map(e => ({ label: [this.fmt(e.occurredAt), e.type, e.actor, s.pickupDetail.accessRestricted ? '' : e.detail].filter(Boolean).join(' · ') })),
+      pickupAssignees: s.pickupAssignees.map(value => ({ value })), programarPickup: this.programarPickup, cancelarPickup: this.cancelarPickup, despacharPickup: this.despacharPickup, completarPickup: this.completarPickup, vincularPickup: this.vincularPickup,
       base: this.base,
       isHome: s.route === 'home', notHome: s.route !== 'home',
       isInterior: s.route !== 'home' && s.route !== 'login',
@@ -2237,7 +2480,7 @@ class Component extends DCLogic {
       t_ultimoPunto: t ? (t.status === 'DELIVERED' ? (t.recipientAddress || t.lastMovementPoint || '—') : (t.lastMovementPoint || 'Sin movimientos reportados')) : '',
       t_ubicSub: t && t.status === 'DELIVERED' ? this.ciudadCorta(t.destinationCity) : '',
       t_ultimoMov: t && t.lastMovementAt ? this.fmt(t.lastMovementAt) : 'Registrado, sin pasos por centro',
-      pasos, frase: t ? paso[2] : '', fraseSub: t ? paso[3] : '',
+      pasos, pasosGrid: { display: 'grid', gridTemplateColumns: 'repeat(' + ORDEN.length + ',minmax(0,1fr))', margin: '24px 0 4px' }, frase: t ? paso[2] : '', fraseSub: t ? paso[3] : '',
       estadoDot: { width: '7px', height: '7px', borderRadius: '50%', background: est ? est[3] : 'transparent', flex: 'none' },
       copyTn: this.copyTn, shareLink: this.shareLink, copied: s.copied || '',
       onEvTn: this.onEvTn, onTipo: this.onTipo, onCentroSel: this.onCentroSel,
