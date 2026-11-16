@@ -25,7 +25,7 @@ a:hover { color: #f4711a; }
   .tf-main-inner { padding: 28px 16px 48px !important; }
   .tf-app-header { padding: 12px 16px !important; gap: 10px !important; }
   .tf-app-logo { height: 34px !important; }
-  .tf-app-nav { display: flex !important; }
+  .tf-app-nav { display: flex !important; order: 3; flex-basis: 100%; flex-wrap: wrap; }
   .tf-app-header { flex-wrap: wrap; }
   .tf-event-hero { margin: -28px -16px 24px !important; padding: 28px 18px 26px !important; }
   .tf-event-hero h1 { font-size: 36px !important; max-width: 10ch !important; }
@@ -202,6 +202,8 @@ a:hover { color: #f4711a; }
     </button>
     <nav class="tf-app-nav" style="display:flex;align-items:center;gap:6px">
       <button onClick="{{ goHome }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff" style-hover="background:rgba(255,255,255,.12)">Rastrear</button>
+      <button onClick="{{ goRecogida }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Pedir recogida</button>
+      <button onClick="{{ goMiRecogida }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Mi recogida</button>
       <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
       <div style="position:relative" ref="{{ opsRef }}">
         <button onClick="{{ toggleOps }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff;display:inline-flex;align-items:center;gap:7px" style-hover="background:rgba(255,255,255,.12)">
@@ -211,7 +213,6 @@ a:hover { color: #f4711a; }
         <sc-if value="{{ opsOpen }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:#f7f7f8;border:1px solid rgba(29,31,32,.3);box-shadow:var(--shadow-md);z-index:40;display:flex;flex-direction:column">
             <button onClick="{{ goNuevo }}" style="text-align:left;padding:11px 14px;background:none;border:0;cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar envío</button>
-            <button onClick="{{ goRecogida }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20">Solicitar recogida</button>
             <button onClick="{{ goRecogidas }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20">Recogidas</button>
             <button onClick="{{ goEvento }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar evento</button>
             <button onClick="{{ goReporte }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Volumen de envíos</button>
@@ -1262,11 +1263,11 @@ a:hover { color: #f4711a; }
     <!-- ══ RECOGIDAS ══ -->
     <sc-if value="{{ isRecogida }}" hint-placeholder-val="{{ false }}">
       <section>
-        <div class="tf-section-kicker">Operaciones / Recogida a domicilio</div>
+        <div class="tf-section-kicker">Recogida a domicilio</div>
         <h1 style="margin:0 0 8px">Solicitar recogida</h1>
-        <p>Registra la visita por el remitente. La dirección y el contacto solo serán visibles para el operador asignado.</p>
+        <p>Solicita una visita para recoger tu paquete. La dirección y el contacto solo serán visibles para el remitente y el operador asignado.</p>
         <sc-if value="{{ pickupCreated }}" hint-placeholder-val="{{ false }}">
-          <div class="tf-status-success" role="status"><div><strong>Solicitud aceptada: {{ pickupCreatedNumber }}</strong><div>Estado: {{ pickupCreatedStatus }}. La recogida se está procesando; puede tardar en aparecer.</div><sc-if value="{{ pickupCreatedGuide }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ verGuiaRecogida }}">Rastrear guía {{ pickupCreatedGuide }}</button></sc-if><button class="btn" onClick="{{ nuevaRecogida }}">Nueva solicitud</button></div></div>
+          <div class="tf-status-success" role="status"><div><strong>Solicitud aceptada: {{ pickupCreatedNumber }}</strong><div>Estado: {{ pickupCreatedStatus }}. La recogida se está procesando; puede tardar en aparecer.</div><p>Código de gestión: <strong>{{ pickupCreatedCode }}</strong><br>Guárdalo junto con el número de recogida: no se volverá a mostrar. Si eres operador, entrégalo al remitente.</p><sc-if value="{{ pickupCreatedGuide }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ verGuiaRecogida }}">Rastrear guía {{ pickupCreatedGuide }}</button></sc-if><button class="btn" onClick="{{ nuevaRecogida }}">Nueva solicitud</button></div></div>
         </sc-if>
         <sc-if value="{{ showPickupForm }}" hint-placeholder-val="{{ true }}">
           <form onSubmit="{{ submitPickup }}" noValidate="{{ true }}" class="tf-panel" style="padding:24px;display:grid;gap:18px">
@@ -1281,12 +1282,42 @@ a:hover { color: #f4711a; }
               <div class="field"><label>Franja horaria *</label><select class="input" name="timeSlot" required><option value="">Selecciona una franja</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div>
               <div class="field"><label>Tamaño del paquete *</label><select class="input" name="packageSize" required><option value="">Selecciona</option><option value="SMALL">Pequeño</option><option value="MEDIUM">Mediano</option><option value="LARGE">Grande</option></select></div>
               <div class="field"><label>Peso aproximado (kg) *</label><input class="input" name="weightKg" type="number" min="0.1" max="100" step="0.01" required></div>
-              <div class="field"><label>Guía vinculada (opcional)</label><input class="input" name="shipmentTrackingNumber" placeholder="TFA1B2C3D4E5F6"></div>
+              <sc-if value="{{ pickupOperator }}" hint-placeholder-val="{{ false }}"><div class="field"><label>Guía vinculada (opcional)</label><input class="input" name="shipmentTrackingNumber" placeholder="TFA1B2C3D4E5F6"></div></sc-if>
             </div>
+            <sc-if value="{{ pickupPublic }}" hint-placeholder-val="{{ true }}"><p class="tf-muted-note">Un operador vinculará la guía a tu recogida.</p></sc-if>
             <p class="tf-muted-note">{{ pickupHoursText }}</p>
             <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
             <button type="submit" class="btn btn-primary" disabled="{{ pickupBusy }}" style="justify-self:start;background:#f4711a;border-color:#f4711a;color:#fff">Solicitar recogida</button>
           </form>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{ isMiRecogida }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Autoservicio / Recogida a domicilio</div><h1 style="margin:0 0 8px">Gestionar mi recogida</h1>
+        <p>Consulta, reprograma o cancela con tu número y código de gestión. Si acabas de solicitarla, puede tardar en aparecer.</p>
+        <form onSubmit="{{ buscarMiPickup }}" class="tf-panel" style="padding:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:end" autoComplete="off">
+          <div class="field" style="flex:1;min-width:200px"><label for="mi-pickup-number">Número de recogida</label><input id="mi-pickup-number" class="input" name="pickupNumber" placeholder="RC seguido de 12 caracteres" required></div>
+          <div class="field" style="flex:1;min-width:180px"><label for="mi-pickup-code">Código de gestión</label><input id="mi-pickup-code" class="input" name="managementCode" type="password" ref="{{ pickupCodeRef }}" autoComplete="off" required></div>
+          <button class="btn btn-primary" type="submit" disabled="{{ pickupLoading }}">Consultar</button>
+        </form>
+        <sc-if value="{{ pickupNotice }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info" role="status">{{ pickupNotice }}</div></sc-if>
+        <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
+        <sc-if value="{{ pickupLoading }}" hint-placeholder-val="{{ false }}"><p>Consultando recogida…</p></sc-if>
+        <sc-if value="{{ pickupDetail }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="padding:24px;margin-top:18px;display:grid;gap:14px">
+            <div><h2 style="margin:0">{{ pdNumber }}</h2><strong>{{ pdStatus }}</strong> · {{ pdCity }} · {{ pdDate }} · {{ pdSlot }}</div>
+            <div>Paquete: {{ pdSize }} · {{ pdWeight }} kg · Guía: {{ pdGuide }}</div>
+            <sc-if value="{{ pdVisible }}" hint-placeholder-val="{{ false }}"><div>Dirección: {{ pdAddress }}<br>Contacto: {{ pdContact }} · {{ pdPhone }}</div></sc-if>
+            <sc-if value="{{ pdRestricted }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">Dirección y contacto no disponibles.</div></sc-if>
+            <sc-if value="{{ pdAwaitingGuide }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">El envío entrará en custodia al vincular la guía.</div></sc-if>
+            <button class="btn" onClick="{{ refrescarPickup }}" style="justify-self:start">Actualizar detalle</button>
+            <sc-if value="{{ pdCanSchedule }}" hint-placeholder-val="{{ false }}">
+              <form onSubmit="{{ programarPickup }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;align-items:end"><div class="field"><label>Fecha</label><input class="input" type="date" name="scheduledDate" defaultValue="{{ pdDate }}" required></div><div class="field"><label>Franja</label><select class="input" name="timeSlot" defaultValue="{{ pdSlot }}" required><option value="">Selecciona</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div><button class="btn" type="submit" disabled="{{ pickupBusy }}">Reprogramar</button></form>
+              <form onSubmit="{{ cancelarPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="reason" maxLength="200" placeholder="Motivo de cancelación (opcional)" style="flex:1;min-width:200px"><button class="btn" type="submit" disabled="{{ pickupBusy }}">Cancelar recogida</button></form>
+            </sc-if>
+            <h3 style="margin:8px 0 0">Historial</h3><sc-for list="{{ pdHistory }}" as="event"><div style="border-top:1px solid #ddd;padding-top:8px">{{ event.label }}</div></sc-for>
+          </div>
         </sc-if>
       </section>
     </sc-if>
@@ -1308,6 +1339,7 @@ a:hover { color: #f4711a; }
             <div>Paquete: {{ pdSize }} · {{ pdWeight }} kg · Asignado: {{ pdAssignee }} · Guía: {{ pdGuide }}</div>
             <sc-if value="{{ pdRestricted }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">Dirección y contacto no visibles para su usuario</div></sc-if>
             <sc-if value="{{ pdVisible }}" hint-placeholder-val="{{ false }}"><div>Dirección: {{ pdAddress }}<br>Contacto: {{ pdContact }} · {{ pdPhone }}</div></sc-if>
+            <sc-if value="{{ pdAwaitingGuide }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">El envío entrará en custodia al vincular la guía.</div></sc-if>
             <button class="btn" onClick="{{ refrescarPickup }}" style="justify-self:start">Actualizar detalle</button>
             <sc-if value="{{ pdCanSchedule }}" hint-placeholder-val="{{ false }}">
               <form onSubmit="{{ programarPickup }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;align-items:end"><div class="field"><label>Fecha</label><input class="input" type="date" name="scheduledDate" defaultValue="{{ pdDate }}"></div><div class="field"><label>Franja</label><select class="input" name="timeSlot" defaultValue="{{ pdSlot }}"><option value="">Selecciona</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div><div class="field"><label>Asignar operador</label><select class="input" name="assignedUsername" defaultValue="{{ pdAssigneeValue }}"><option value="">Sin cambiar asignación</option><sc-for list="{{ pickupAssignees }}" as="user"><option value="{{ user.value }}">{{ user.value }}</option></sc-for></select></div><button class="btn" type="submit" disabled="{{ pickupBusy }}">Reprogramar / asignar</button></form>
@@ -1386,6 +1418,7 @@ const DOC_HINTS = {
 const TN_RE = /^TF[A-Z0-9]{12}$/;
 const PICKUP_RE = /^RC[A-Z0-9]{12}$/;
 const PICKUP_STATES = { REQUESTED: 'Solicitada', SCHEDULED: 'Programada', ON_THE_WAY: 'En camino', PICKED_UP: 'Recogida', CANCELLED: 'Cancelada' };
+const PICKUP_EVENTS = { CREATED: 'Solicitada', SCHEDULED: 'Programada', RESCHEDULED: 'Reprogramada', ASSIGNED: 'Asignada', DISPATCHED: 'Despachada', COMPLETED: 'Recogida', CANCELLED: 'Cancelada', SHIPMENT_LINKED: 'Guía vinculada' };
 
 function validarHorarioRecogida(date, slot, hours, now = new Date()) {
   if (!hours || !Array.isArray(hours.slots) || !Array.isArray(hours.days) || !hours.timeZone) return 'No se pudo cargar el horario de recogidas.';
@@ -1440,6 +1473,7 @@ class Component extends DCLogic {
     this.formRef = React.createRef();
     this.evFormRef = React.createRef();
     this.loginFormRef = React.createRef();
+    this.pickupCodeRef = React.createRef();
     this.state = {
       route: 'home', q: '', qError: '', opsOpen: false,
       loading: false, notFound: false, netError: '', tracking: null,
@@ -1457,13 +1491,32 @@ class Component extends DCLogic {
       tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: '',
       pickupCityText: '', pickupCityId: null, pickupCities: [], pickupOpen: false, pickupHours: null,
       pickupCreated: null, pickupCreatedGuide: '', pickupError: '', pickupNotice: '', pickupBusy: false,
-      pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: []
+      pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: [], pickupCode: ''
     };
   }
 
-  componentWillUnmount() { document.removeEventListener('mousedown', this.onDocDown, true); clearTimeout(this._ct_pickup); }
+  componentWillUnmount() { this._pickupSession = (this._pickupSession || 0) + 1; document.removeEventListener('mousedown', this.onDocDown, true); window.removeEventListener('beforeunload', this.onBeforeUnload); clearTimeout(this._ct_pickup); }
+  onBeforeUnload = (e) => {
+    if (this.state.route === 'recogida' && (this.state.pickupBusy || this.state.pickupCreated)) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+  setState(update, cb) {
+    const patch = typeof update === 'function' ? update(this.state) : update;
+    if (patch.route && patch.route !== this.state.route && ['recogida', 'mi-recogida', 'recogidas'].includes(this.state.route)) {
+      if (this.state.route === 'recogida' && this.state.pickupBusy) return;
+      if (this.state.route === 'recogida' && this.state.pickupCreated && !window.confirm('Guarda el número y el código de gestión antes de salir. ¿Deseas salir?')) return;
+      this._pickupSession = (this._pickupSession || 0) + 1;
+      clearTimeout(this._ct_pickup);
+      super.setState({ pickupCode: '', pickupCreated: null, pickupCreatedGuide: '', pickupDetail: null, pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupCityText: '', pickupCityId: null, pickupCities: [], ...patch }, cb);
+    } else {
+      super.setState(patch, cb);
+    }
+  }
   componentDidMount() {
     document.addEventListener('mousedown', this.onDocDown, true);
+    window.addEventListener('beforeunload', this.onBeforeUnload);
     try {
       const t = localStorage.getItem('tf_token'), r = localStorage.getItem('tf_roles');
       if (t) this.setState({ token: t, roles: r || 'OPERADOR' }, () => this.verificarSesion());
@@ -1489,7 +1542,7 @@ class Component extends DCLogic {
     this.setState({ token: null, roles: '', usuario: '', created: null, evCtx: null, acciones: [], ubicacionActual: null,
       tipoSel: '', centroId: null, evOk: null, evClave: null, adminResult: null, opsOpen: false, userOpen: false,
       repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '',
-      pickupCreated: null, pickupCreatedGuide: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
+      pickupCreated: null, pickupCreatedGuide: '', pickupCode: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
   }
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
@@ -1524,6 +1577,7 @@ class Component extends DCLogic {
     }
     if (conToken) headers['Authorization'] = 'Bearer ' + this.state.token;
     if (opts.idempotencia) headers['Idempotency-Key'] = opts.idempotencia;
+    if (opts.codigoGestion) headers['X-Codigo-Gestion'] = opts.codigoGestion;
     const ctrl = new AbortController();
     const ms = opts.timeout || 10000;
     const timer = setTimeout(() => ctrl.abort(), ms);
@@ -1559,8 +1613,13 @@ class Component extends DCLogic {
   goNuevo = () => this.setState(this.state.token ? { route: 'nuevo', opsOpen: false } : { route: 'login', opsOpen: false });
   goEvento = () => this.setState(this.state.token ? { route: 'evento', opsOpen: false } : { route: 'login', opsOpen: false });
   goRecogida = () => {
-    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
     this.setState({ route: 'recogida', opsOpen: false, pickupError: '', pickupNotice: '' });
+    this.cargarHorarioPickup();
+  };
+  goMiRecogida = () => {
+    this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    if (this.pickupCodeRef.current) this.pickupCodeRef.current.value = '';
+    this.setState({ route: 'mi-recogida', opsOpen: false, pickupError: '', pickupNotice: '', pickupDetail: null, pickupCode: '', pickupLoading: false, pickupBusy: false });
     this.cargarHorarioPickup();
   };
   goRecogidas = () => {
@@ -1622,6 +1681,8 @@ class Component extends DCLogic {
   // HU-08: cerrar sesión la invalida en el servidor (el token deja de servir aunque no
   // haya vencido) y además se borra del navegador.
   logout = async () => {
+    if (this.state.route === 'recogida' && this.state.pickupBusy) return;
+    if (this.state.route === 'recogida' && this.state.pickupCreated && !window.confirm('Guarda el número y el código de gestión antes de salir. ¿Deseas salir?')) return;
     const token = this.state.token;
     this.olvidarSesion();
     // HU-08: al cerrar sesión se vuelve a la pantalla de inicio de sesión, sin mensaje de
@@ -1706,11 +1767,13 @@ class Component extends DCLogic {
   };
 
   async cargarHorarioPickup() {
+    const session = this._pickupSession;
     try {
       const r = await this.api('/api/pickups/operating-hours', { publico: true, timeout: 45000 });
+      if (session !== this._pickupSession) return;
       if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo cargar el horario de recogidas.');
       this.setState({ pickupHours: r.data });
-    } catch (e) { this.setState({ pickupHours: null, pickupError: e.message }); }
+    } catch (e) { if (session === this._pickupSession) this.setState({ pickupHours: null, pickupError: e.message }); }
   }
   async cargarAsignablesPickup() {
     const session = this._pickupSession;
@@ -1741,16 +1804,29 @@ class Component extends DCLogic {
     if (!PICKUP_RE.test(number)) return this.setState({ pickupDetail: null, pickupError: 'El número debe ser RC seguido de 12 caracteres alfanuméricos.' });
     this.consultarPickup(number);
   };
-  async consultarPickup(number) {
+  buscarMiPickup = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), number = String(f.get('pickupNumber') || '').trim().toUpperCase(), code = String(f.get('managementCode') || '').trim().toUpperCase();
+    if (e.target.elements && e.target.elements.managementCode) e.target.elements.managementCode.value = '';
+    this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    this.setState({ pickupCode: '', pickupDetail: null, pickupNotice: '', pickupLoading: false });
+    if (!PICKUP_RE.test(number)) return this.setState({ pickupError: 'El número debe ser RC seguido de 12 caracteres alfanuméricos.' });
+    if (!code) return this.setState({ pickupError: 'Ingresa el código de gestión.' });
+    this.consultarPickup(number, code);
+  };
+  async consultarPickup(number, code) {
     const session = this._pickupSession, request = this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    const selfService = this.state.route === 'mi-recogida';
+    code = selfService ? (code || this.state.pickupCode) : '';
+    if (selfService && !code) return;
     this.setState({ pickupLoading: true, pickupError: '', pickupDetail: null });
     try {
-      const r = await this.api('/api/pickups/' + encodeURIComponent(number), { timeout: 45000 });
+      const r = await this.api('/api/pickups/' + (selfService ? 'self-service/' : '') + encodeURIComponent(number), { timeout: 45000, publico: selfService, codigoGestion: code });
       if (session !== this._pickupSession || request !== this._pickupDetailRequest) return;
-      if (r.status === 401) return this.setState({ pickupLoading: false });
-      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 404 ? 'No se encontró la recogida. Si acaba de solicitarse, espera y vuelve a consultar.' : 'No se pudo consultar la recogida.'));
-      this.setState({ pickupLoading: false, pickupDetail: r.data });
-    } catch (e) { if (session === this._pickupSession && request === this._pickupDetailRequest) this.setState({ pickupLoading: false, pickupError: e.message }); }
+      if (r.status === 401 && !selfService) return this.setState({ pickupLoading: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 404 ? 'No se encontró la recogida o el código no coincide. Si acaba de solicitarse, espera y vuelve a consultar.' : r.status === 429 ? 'Demasiados intentos. Espera antes de volver a consultar.' : 'No se pudo consultar la recogida.'));
+      this.setState({ pickupLoading: false, pickupDetail: r.data, pickupCode: code });
+    } catch (e) { if (session === this._pickupSession && request === this._pickupDetailRequest) this.setState({ pickupLoading: false, pickupCode: '', pickupError: e.message }); }
   }
   refrescarPickup = () => { if (this.state.pickupDetail) this.consultarPickup(this.state.pickupDetail.pickupNumber); };
   submitPickup = async (e) => {
@@ -1758,7 +1834,8 @@ class Component extends DCLogic {
     if (this.state.pickupBusy) return;
     const session = this._pickupSession;
     const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
-    const body = { address: v('address'), cityId: this.state.pickupCityId, contactName: v('contactName'), contactPhone: v('contactPhone'), scheduledDate: v('scheduledDate'), timeSlot: v('timeSlot'), packageSize: v('packageSize'), weightKg: Number(v('weightKg')), shipmentTrackingNumber: v('shipmentTrackingNumber').toUpperCase() || null };
+    const operator = !!this.state.token && /OPERADOR|ADMIN/.test(this.state.roles);
+    const body = { address: v('address'), cityId: this.state.pickupCityId, contactName: v('contactName'), contactPhone: v('contactPhone'), scheduledDate: v('scheduledDate'), timeSlot: v('timeSlot'), packageSize: v('packageSize'), weightKg: Number(v('weightKg')), shipmentTrackingNumber: operator ? v('shipmentTrackingNumber').toUpperCase() || null : null };
     const error = !body.cityId ? 'Selecciona una ciudad de la lista.'
       : body.address.length < 5 || body.address.length > 200 ? 'La dirección debe tener entre 5 y 200 caracteres.'
       : body.contactName.length < 3 || body.contactName.length > 120 ? 'El nombre debe tener entre 3 y 120 caracteres.'
@@ -1770,21 +1847,28 @@ class Component extends DCLogic {
     if (error) return this.setState({ pickupError: error });
     this.setState({ pickupBusy: true, pickupError: '' });
     try {
-      const r = await this.api('/api/pickups', { method: 'POST', body, timeout: 45000 });
+      let r;
+      try {
+        r = await this.api(operator ? '/api/pickups' : '/api/pickups/self-service', { method: 'POST', body, timeout: 45000, publico: !operator });
+      } catch (err) {
+        throw new Error(err.message + '. La solicitud podría haberse aceptado y el código perdido; evita repetirla sin verificar con soporte.');
+      }
       if (session !== this._pickupSession) return;
       if (r.status === 401) return this.setState({ pickupBusy: false });
       if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo solicitar la recogida.');
       this.setState({ pickupBusy: false, pickupCreated: r.data, pickupCreatedGuide: body.shipmentTrackingNumber || '', pickupCityText: '', pickupCityId: null });
     } catch (err) { if (session === this._pickupSession) this.setState({ pickupBusy: false, pickupError: err.message }); }
   };
-  nuevaRecogida = () => this.setState({ pickupCreated: null, pickupCreatedGuide: '', pickupError: '' });
+  nuevaRecogida = () => { if (window.confirm('Guarda el número y el código de gestión antes de continuar. ¿Deseas iniciar otra solicitud?')) this.setState({ pickupCreated: null, pickupCreatedGuide: '', pickupError: '' }); };
   verGuiaRecogida = () => { const tn = this.state.pickupCreatedGuide; this.setState({ q: tn, route: 'result' }); this.fetchTracking(tn); };
   programarPickup = (e) => {
     e.preventDefault();
     const f = new FormData(e.target), date = String(f.get('scheduledDate') || ''), slot = String(f.get('timeSlot') || '');
     const error = validarHorarioRecogida(date, slot, this.state.pickupHours);
     if (error) return this.setState({ pickupError: error });
-    this.comandoPickup('schedule', 'PUT', { scheduledDate: date, timeSlot: slot, assignedUsername: String(f.get('assignedUsername') || '') || null });
+    const body = { scheduledDate: date, timeSlot: slot };
+    if (this.state.route !== 'mi-recogida') body.assignedUsername = String(f.get('assignedUsername') || '') || null;
+    this.comandoPickup('schedule', 'PUT', body);
   };
   cancelarPickup = (e) => { e.preventDefault(); this.comandoPickup('cancel', 'POST', { reason: String(new FormData(e.target).get('reason') || '').trim() || null }); };
   despacharPickup = () => this.comandoPickup('dispatch', 'POST');
@@ -1797,16 +1881,18 @@ class Component extends DCLogic {
   };
   async comandoPickup(action, method, body) {
     if (!this.state.pickupDetail || this.state.pickupBusy) return;
-    const session = this._pickupSession;
+    const session = this._pickupSession, request = this._pickupDetailRequest;
     const number = this.state.pickupDetail.pickupNumber;
+    const selfService = this.state.route === 'mi-recogida';
+    if (selfService && (!this.state.pickupCode || !['schedule', 'cancel'].includes(action))) return;
     this.setState({ pickupBusy: true, pickupError: '', pickupNotice: '' });
     try {
-      const r = await this.api('/api/pickups/' + encodeURIComponent(number) + '/' + action, { method, body, timeout: 45000 });
-      if (session !== this._pickupSession) return;
-      if (r.status === 401) return this.setState({ pickupBusy: false });
-      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo procesar la operación.');
+      const r = await this.api('/api/pickups/' + (selfService ? 'self-service/' : '') + encodeURIComponent(number) + '/' + action, { method, body, timeout: 45000, publico: selfService, codigoGestion: selfService ? this.state.pickupCode : '' });
+      if (session !== this._pickupSession || (selfService && request !== this._pickupDetailRequest)) return;
+      if (r.status === 401 && !selfService) return this.setState({ pickupBusy: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 429 ? 'Demasiados intentos. Espera antes de volver a intentar.' : 'No se pudo procesar la operación.'));
       this.setState({ pickupBusy: false, pickupNotice: 'Operación aceptada y en procesamiento. Actualiza el detalle para confirmar el estado.' });
-    } catch (err) { if (session === this._pickupSession) this.setState({ pickupBusy: false, pickupError: err.message }); }
+    } catch (err) { if (session === this._pickupSession && (!selfService || request === this._pickupDetailRequest)) this.setState({ pickupBusy: false, pickupError: err.message }); }
   }
 
   // ── registrar envío ──
@@ -2428,8 +2514,8 @@ class Component extends DCLogic {
       ...this.vistaReporte(s),
       ...this.vistaRetrasados(s),
       ...this.vistaTiempos(s),
-      isRecogida: s.route === 'recogida', isRecogidas: s.route === 'recogidas',
-      goRecogida: this.goRecogida, goRecogidas: this.goRecogidas,
+      isRecogida: s.route === 'recogida', isRecogidas: s.route === 'recogidas', isMiRecogida: s.route === 'mi-recogida',
+      goRecogida: this.goRecogida, goRecogidas: this.goRecogidas, goMiRecogida: this.goMiRecogida, buscarMiPickup: this.buscarMiPickup, pickupCodeRef: this.pickupCodeRef,
       pickupCityText: s.pickupCityText, pickupCityOpen: s.pickupOpen && !!s.pickupCityText.trim() && !s.pickupCityId,
       onPickupCity: e => this.searchCities('pickup', e.target.value),
       pickupCities: s.pickupCities.map(c => ({ etiqueta: c.label, pick: () => this.pickCity('pickup', c) })),
@@ -2437,8 +2523,10 @@ class Component extends DCLogic {
       pickupHoursText: s.pickupHours ? 'Horario: ' + s.pickupHours.open + '–' + s.pickupHours.close + ' (' + s.pickupHours.timeZone + '). Anticipación: ' + s.pickupHours.leadTimeHours + ' horas; horizonte: ' + s.pickupHours.horizonDays + ' días.' : 'Cargando horario de atención.',
       pickupCreated: !!s.pickupCreated, showPickupForm: !s.pickupCreated,
       pickupCreatedNumber: s.pickupCreated ? s.pickupCreated.pickupNumber : '', pickupCreatedStatus: s.pickupCreated ? (PICKUP_STATES[s.pickupCreated.status] || s.pickupCreated.status) : '',
+      pickupCreatedCode: s.pickupCreated ? s.pickupCreated.managementCode : '',
       pickupCreatedGuide: s.pickupCreatedGuide, verGuiaRecogida: this.verGuiaRecogida, nuevaRecogida: this.nuevaRecogida,
       submitPickup: this.submitPickup, pickupBusy: s.pickupBusy, pickupError: s.pickupError, pickupNotice: s.pickupNotice,
+      pickupOperator: !!s.token && /OPERADOR|ADMIN/.test(s.roles), pickupPublic: !(s.token && /OPERADOR|ADMIN/.test(s.roles)),
       pickupLoading: s.pickupLoading, pickupFilter: s.pickupFilter, buscarPickup: this.buscarPickup, filtrarPickups: this.filtrarPickups, actualizarPickups: this.actualizarPickups,
       pickupRows: s.pickupList.map(p => ({ label: p.pickupNumber + ' · ' + (PICKUP_STATES[p.status] || p.status) + ' · ' + (p.cityName || '') + ' · ' + p.scheduledDate + ' ' + p.timeSlot, open: () => this.consultarPickup(p.pickupNumber) })),
       pickupDetail: !!s.pickupDetail, refrescarPickup: this.refrescarPickup,
@@ -2450,7 +2538,8 @@ class Component extends DCLogic {
       pdAddress: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.address : '', pdContact: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.contactName : '', pdPhone: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.contactPhone : '',
       pdCanSchedule: !!(s.pickupDetail && ['REQUESTED', 'SCHEDULED'].includes(s.pickupDetail.status)), pdCanDispatch: !!(s.pickupDetail && s.pickupDetail.status === 'SCHEDULED'), pdCanComplete: !!(s.pickupDetail && s.pickupDetail.status === 'ON_THE_WAY'),
       pdCanLink: !!(s.pickupDetail && s.pickupDetail.status !== 'CANCELLED' && !s.pickupDetail.shipmentTrackingNumber),
-      pdHistory: ((s.pickupDetail && s.pickupDetail.history) || []).map(e => ({ label: [this.fmt(e.occurredAt), e.type, e.actor, s.pickupDetail.accessRestricted ? '' : e.detail].filter(Boolean).join(' · ') })),
+      pdAwaitingGuide: !!(s.pickupDetail && s.pickupDetail.status === 'PICKED_UP' && !s.pickupDetail.shipmentTrackingNumber),
+      pdHistory: ((s.pickupDetail && s.pickupDetail.history) || []).map(e => ({ label: [this.fmt(e.occurredAt), PICKUP_EVENTS[e.type] || e.type, e.actor, s.pickupDetail.accessRestricted && e.type === 'CANCELLED' ? '' : e.detail].filter(Boolean).join(' · ') })),
       pickupAssignees: s.pickupAssignees.map(value => ({ value })), programarPickup: this.programarPickup, cancelarPickup: this.cancelarPickup, despacharPickup: this.despacharPickup, completarPickup: this.completarPickup, vincularPickup: this.vincularPickup,
       base: this.base,
       isHome: s.route === 'home', notHome: s.route !== 'home',

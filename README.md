@@ -13,7 +13,8 @@ Prototipo funcional del frontend de TrackFlow (Fábrica Escuela, UdeA 2026-2). C
 | Rastrear envío: estado, pasos y línea de tiempo | Público | HU-03, HU-04 |
 | Registrar envío | Operador | HU-01 |
 | Registrar evento logístico | Operador | HU-02 |
-| Solicitar recogida a domicilio | Operador | HU-20 |
+| Solicitar recogida a domicilio | Público / Operador | HU-20 |
+| Gestionar mi recogida | Público con código de gestión | HU-20 |
 | Consultar y operar recogidas | Operador | HU-20 |
 | Volumen de envíos por periodo y punto de ingreso | Operador | HU-07 |
 | Tiempos de tránsito: promedio total y por tramo de los envíos entregados | Operador | HU-05 |
@@ -74,10 +75,11 @@ El plan gratuito de Render duerme el servicio: la primera consulta puede tardar 
 - **Sesión (HU-08):** el token solo viaja en las peticiones protegidas; cualquier 401 lleva al login con el aviso "Sesión terminada" (sesión cerrada o inactiva más de 30 min); cerrar sesión la invalida en el servidor y borra de la pantalla los datos de la operación.
 - **Idempotencia:** el registro de eventos envía `Idempotency-Key`; si falla por red y se reintenta, el backend no duplica el movimiento.
 - **Validación en el navegador** antes de llamar al backend (campos obligatorios, formato de guía, fechas), y los errores del backend se muestran con su `detail`.
-- **Recogidas (HU-20):** `/api/pickups/**` se dirige a API 1. El horario público (`GET /operating-hours`) define días, franjas, anticipación, horizonte y zona horaria. La solicitud acepta guía opcional; su número `RC` se entrega al aceptar el comando.
+- **Recogidas (HU-20):** `/api/pickups/**` se dirige a API 1. El horario público (`GET /operating-hours`) define días, franjas, anticipación, horizonte y zona horaria. La solicitud devuelve el número `RC` y el código de gestión una sola vez; el operador debe entregárselo al remitente. Sin sesión de operador se usa `POST /api/pickups/self-service`: la guía solo puede vincularla un operador, para evitar vincular una guía ajena sin acreditar titularidad.
+- Con el número y la cabecera `X-Codigo-Gestion`, el remitente consulta `GET /api/pickups/self-service/{numero}`, reprograma fecha y franja con `PUT /{numero}/schedule` o cancela con `POST /{numero}/cancel`, ambos bajo el mismo prefijo. El código se mantiene solo en memoria y se borra al salir; no se guarda en la URL ni en almacenamiento local. Un 404 no distingue entre número y código incorrectos; un 429 indica exceso de intentos.
 - La lista (`GET /api/pickups?status=...`) y el detalle permiten reprogramar y asignar (`PUT /{numero}/schedule`, con `scheduledDate`, `timeSlot` y `assignedUsername`), cancelar, despachar, completar y vincular una guía. Los operadores asignables se obtienen de `GET /api/pickups/assignees`. La dirección y el contacto solo se muestran cuando API 1 devuelve `accessRestricted: false`.
 - Las escrituras de recogidas responden `202` antes de procesarse: el detalle puede devolver 404 o conservar el estado anterior. Actualizar para confirmar; un comando que pierda una carrera puede rechazarse en el consumidor y no producir cambios.
-- Un envío recogido puede aparecer como `IN_CUSTODY` y su historial como `PICKED_UP`. El paso de custodia solo se muestra si existe ese estado o movimiento.
+- Un envío recogido puede aparecer como `IN_CUSTODY` y su historial como `PICKED_UP`. El paso de custodia solo se muestra si existe ese estado o movimiento. Si la recogida se completa sin guía, la custodia comienza al vincularla.
 
 ## Pruebas
 

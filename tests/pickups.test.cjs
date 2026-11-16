@@ -14,7 +14,7 @@ function setup() {
     setState(update) { Object.assign(this.state, typeof update === 'function' ? update(this.state) : update); }
   }
   class FormData { constructor(form) { this.form = form; } get(key) { return this.form[key] || null; } }
-  const context = vm.createContext({ DCLogic, React: { createRef: () => ({ current: null }) }, FormData, AbortController, setTimeout, clearTimeout });
+  const context = vm.createContext({ DCLogic, React: { createRef: () => ({ current: null }) }, FormData, AbortController, setTimeout, clearTimeout, window: { confirm: () => true } });
   vm.runInContext(source + '\nthis.TestComponent = Component; this.validate = validarHorarioRecogida;', context);
   const app = new context.TestComponent({});
   return { app, validate: context.validate };
@@ -35,6 +35,7 @@ test('validates configured days, horizon, slot and Bogota lead time', () => {
 
 test('submits the API creation contract and normalizes optional tracking', async () => {
   const { app } = setup();
+  app.state.token = 'token'; app.state.roles = 'OPERADOR';
   const tomorrow = new Date(Date.now() + 86400000 * 2);
   const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(tomorrow);
   app.state.pickupHours = { ...hours, days: [1, 2, 3, 4, 5, 6, 7] };
@@ -45,6 +46,142 @@ test('submits the API creation contract and normalizes optional tracking', async
   assert.equal(sent.url, '/api/pickups');
   assert.deepEqual(JSON.parse(JSON.stringify(sent.options.body)), { address: 'Calle 123', cityId: 3, contactName: 'Ana Torres', contactPhone: '3001234567', scheduledDate: date, timeSlot: '08:00-10:00', packageSize: 'MEDIUM', weightKg: 5.5, shipmentTrackingNumber: 'TF0123456789AB' });
   assert.equal(app.state.pickupCreated.pickupNumber, 'RC123456789012');
+});
+
+test('public creation uses self-service without a token and displays its one-time code', async () => {
+  const { app } = setup();
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + 86400000 * 2));
+  app.state.route = 'recogida'; app.state.pickupHours = { ...hours, days: [1, 2, 3, 4, 5, 6, 7] }; app.state.pickupCityId = 3;
+  let sent;
+  app.api = async (url, options) => { sent = { url, options }; return { ok: true, status: 202, data: { pickupNumber: 'RC123456789012', managementCode: 'ABCDEFGH', status: 'REQUESTED' } }; };
+  await app.submitPickup({ preventDefault() {}, target: { address: 'Calle 123', contactName: 'Ana Torres', contactPhone: '3001234567', scheduledDate: date, timeSlot: '08:00-10:00', packageSize: 'MEDIUM', weightKg: '5', shipmentTrackingNumber: 'TF0123456789AB' } });
+  assert.equal(sent.url, '/api/pickups/self-service');
+  assert.equal(sent.options.publico, true);
+  assert.equal(sent.options.body.shipmentTrackingNumber, null);
+  assert.equal(app.renderVals().pickupPublic, true);
+  assert.equal(app.renderVals().pickupCreatedCode, 'ABCDEFGH');
+  app.goHome();
+  assert.equal(app.state.pickupCreated, null);
+});
+
+test('self-service consults private details and sends only permitted commands', async () => {
+  const { app } = setup();
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + 86400000 * 2));
+  app.state.route = 'mi-recogida'; app.state.token = 'token'; app.state.pickupHours = { ...hours, days: [1, 2, 3, 4, 5, 6, 7] };
+  const calls = [];
+  app.api = async (url, options) => { calls.push({ url, options }); return { ok: true, status: 202, data: { pickupNumber: 'RC123456789012', status: 'REQUESTED', accessRestricted: false, address: 'Calle 123', contactName: 'Ana', contactPhone: '3001234567' } }; };
+  app.buscarMiPickup({ preventDefault() {}, target: { pickupNumber: 'rc123456789012', managementCode: 'abcdefgh' } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls[0].url, '/api/pickups/self-service/RC123456789012');
+  assert.equal(calls[0].options.codigoGestion, 'ABCDEFGH');
+  assert.equal(calls[0].options.publico, true);
+  assert.equal(app.renderVals().pdAddress, 'Calle 123');
+  app.programarPickup({ preventDefault() {}, target: { scheduledDate: date, timeSlot: '08:00-10:00', assignedUsername: 'intruso' } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls[1].url, '/api/pickups/self-service/RC123456789012/schedule');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[1].options.body)), { scheduledDate: date, timeSlot: '08:00-10:00' });
+  assert.equal(calls[1].options.codigoGestion, 'ABCDEFGH');
+  app.cancelarPickup({ preventDefault() {}, target: { reason: 'Cambio de planes' } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls[2].url, '/api/pickups/self-service/RC123456789012/cancel');
+  assert.equal(calls[2].options.body.reason, 'Cambio de planes');
+  assert.match(app.state.pickupNotice, /procesamiento/);
+  app.goHome();
+  assert.equal(app.state.pickupCode, '');
+  assert.equal(app.state.pickupDetail, null);
+});
+
+test('leaving self-service discards a late response and its code', async () => {
+  const { app } = setup();
+  app.state.route = 'mi-recogida';
+  let resolve;
+  app.api = () => new Promise(done => { resolve = done; });
+  const pending = app.consultarPickup('RC123456789012', 'ABCDEFGH');
+  app.goHome();
+  resolve({ ok: true, data: { address: 'secret', accessRestricted: false } });
+  await pending;
+  assert.equal(app.state.pickupCode, '');
+  assert.equal(app.state.pickupDetail, null);
+});
+
+test('reopening self-service invalidates an in-flight lookup and clears the input', async () => {
+  const { app } = setup(); app.state.route = 'mi-recogida';
+  let resolve;
+  app.api = url => url.endsWith('operating-hours') ? Promise.resolve({ ok: true, data: hours }) : new Promise(done => { resolve = done; });
+  const input = { value: 'ABCDEFGH' };
+  app.buscarMiPickup({ preventDefault() {}, target: { pickupNumber: 'RC123456789012', managementCode: 'ABCDEFGH', elements: { managementCode: input } } });
+  assert.equal(input.value, '');
+  app.pickupCodeRef.current = { value: 'NEWCODE' };
+  app.goMiRecogida();
+  assert.equal(app.pickupCodeRef.current.value, '');
+  resolve({ ok: true, data: { address: 'secret', accessRestricted: false } });
+  await new Promise(done => setImmediate(done));
+  assert.equal(app.state.pickupCode, '');
+  assert.equal(app.state.pickupDetail, null);
+});
+
+test('navigation waits for creation so its one-time code is not lost', async () => {
+  const { app } = setup();
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + 86400000 * 2));
+  app.state.route = 'recogida'; app.state.pickupHours = { ...hours, days: [1, 2, 3, 4, 5, 6, 7] }; app.state.pickupCityId = 3;
+  let resolve;
+  app.api = () => new Promise(done => { resolve = done; });
+  const pending = app.submitPickup({ preventDefault() {}, target: { address: 'Calle 123', contactName: 'Ana Torres', contactPhone: '3001234567', scheduledDate: date, timeSlot: '08:00-10:00', packageSize: 'MEDIUM', weightKg: '5' } });
+  app.goHome();
+  assert.equal(app.state.route, 'recogida');
+  resolve({ ok: true, status: 202, data: { pickupNumber: 'RC123456789012', managementCode: 'ABCDEFGH' } });
+  await pending;
+  assert.equal(app.state.pickupCreated.managementCode, 'ABCDEFGH');
+});
+
+test('reload and logout protect an in-flight creation', async () => {
+  const { app } = setup();
+  app.state.route = 'recogida'; app.state.pickupBusy = true; app.state.token = 'token';
+  const event = { preventDefault() { this.prevented = true; } };
+  app.onBeforeUnload(event);
+  assert.equal(event.prevented, true);
+  await app.logout();
+  assert.equal(app.state.token, 'token');
+  assert.equal(app.state.route, 'recogida');
+});
+
+test('creation warns when a network failure leaves the result uncertain', async () => {
+  const { app } = setup();
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + 86400000 * 2));
+  app.state.route = 'recogida'; app.state.pickupHours = { ...hours, days: [1, 2, 3, 4, 5, 6, 7] }; app.state.pickupCityId = 3;
+  app.api = async () => { throw new Error('Sin conexión'); };
+  await app.submitPickup({ preventDefault() {}, target: { address: 'Calle 123', contactName: 'Ana Torres', contactPhone: '3001234567', scheduledDate: date, timeSlot: '08:00-10:00', packageSize: 'MEDIUM', weightKg: '5' } });
+  assert.match(app.state.pickupError, /podría haberse aceptado/);
+  assert.match(app.state.pickupError, /evita repetirla/);
+});
+
+test('self-service credentials are cleared by logout and navigation to login', () => {
+  const { app } = setup();
+  app.state.route = 'mi-recogida'; app.state.pickupCode = 'ABCDEFGH'; app.state.pickupDetail = { address: 'secret' };
+  app.goLogin();
+  assert.equal(app.state.pickupCode, '');
+  assert.equal(app.state.pickupDetail, null);
+  app.state.route = 'mi-recogida'; app.state.pickupCode = 'ABCDEFGH'; app.state.pickupDetail = { address: 'secret' };
+  app.olvidarSesion();
+  assert.equal(app.state.pickupCode, '');
+  assert.equal(app.state.pickupDetail, null);
+});
+
+test('self-service errors clear the code and explain throttling', async () => {
+  const { app } = setup(); app.state.route = 'mi-recogida';
+  app.api = async () => ({ ok: false, status: 429 });
+  await app.consultarPickup('RC123456789012', 'ABCDEFGH');
+  assert.equal(app.state.pickupCode, '');
+  assert.match(app.state.pickupError, /Demasiados intentos/);
+});
+
+test('history translates events and preserves non-private details for restricted operators', () => {
+  const { app } = setup();
+  app.state.pickupDetail = { status: 'PICKED_UP', accessRestricted: true, history: [{ type: 'RESCHEDULED', detail: 'De lunes a martes' }, { type: 'CANCELLED', detail: 'privado' }] };
+  const view = app.renderVals();
+  assert.match(view.pdHistory[0].label, /Reprogramada.*De lunes a martes/);
+  assert.doesNotMatch(view.pdHistory[1].label, /privado/);
+  assert.equal(view.pdAwaitingGuide, true);
 });
 
 test('labels all states and suppresses private fields for restricted details', () => {
