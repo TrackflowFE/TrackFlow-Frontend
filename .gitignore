@@ -2,3 +2,4 @@
 .thumbnail
 Thumbs.db
 .DS_Store
+tests/print/out/

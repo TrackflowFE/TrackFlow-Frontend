@@ -36,7 +36,9 @@ test('each route goes to the API that owns it', () => {
   const { app } = component(URLS);
   const esperado = {
     'https://shipments.example': ['/api/auth/login', '/api/auth/sesion', '/api/auth/logout',
-      '/api/cities?q=ma&onlyCovered=true', '/api/shipments'],
+      '/api/cities?q=ma&onlyCovered=true', '/api/shipments', '/api/shipments/TF123/receipt',
+      '/api/pickups', '/api/pickups?status=REQUESTED',
+      '/api/pickups/operating-hours', '/api/pickups/RC123/schedule'],
     'https://logistics.example': ['/api/shipments/TF123/events', '/api/shipments/TF123/route',
       '/api/shipments/TF123/actions', '/api/centers'],
     'https://reports.example': ['/api/tracking/TF123', '/api/reports/delayed-shipments',
@@ -97,4 +99,17 @@ test('registration and login go straight to API 1 without renewing anything', as
   assert.equal(requests.length, 2);
   assert.equal(requests[0].url, 'https://shipments.example/api/shipments');
   assert.equal(requests[1].url, 'https://shipments.example/api/auth/login');
+});
+
+test('self-service requests never transmit a session token', async () => {
+  const { app, requests } = component(URLS);
+  app.state.token = 'expired-jwt';
+  await app.api('/api/pickups/self-service', { method: 'POST', body: {}, publico: true });
+  for (const [suffix, method] of [['', 'GET'], ['/schedule', 'PUT'], ['/cancel', 'POST']]) {
+    await app.api('/api/pickups/self-service/RC123456789012' + suffix, { method, publico: true, codigoGestion: 'ABCDEFGH' });
+  }
+  assert.equal(requests.length, 4);
+  for (const request of requests) assert.equal(request.options.headers.Authorization, undefined);
+  for (const request of requests.slice(1)) assert.equal(request.options.headers['X-Codigo-Gestion'], 'ABCDEFGH');
+  for (const request of requests) assert.match(request.url, /^https:\/\/shipments\.example\/api\/pickups\/self-service/);
 });

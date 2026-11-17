@@ -10,9 +10,12 @@ Prototipo funcional del frontend de TrackFlow (Fábrica Escuela, UdeA 2026-2). C
 
 | Pantalla | Acceso | Historia |
 |---|---|---|
-| Rastrear envío: estado, pasos y línea de tiempo | Público | HU-03, HU-04 |
-| Registrar envío | Operador | HU-01 |
+| Rastrear envío: estado, pasos y línea de tiempo | Público (datos mínimos) | HU-03, HU-04, HU-14 |
+| Registrar envío | Operador | HU-01, HU-14 |
 | Registrar evento logístico | Operador | HU-02 |
+| Solicitar recogida a domicilio | Público / Operador | HU-20 |
+| Gestionar mi recogida | Público con código de gestión | HU-20 |
+| Consultar y operar recogidas | Operador | HU-20 |
 | Volumen de envíos por periodo y punto de ingreso | Operador | HU-07 |
 | Tiempos de tránsito: promedio total y por tramo de los envíos entregados | Operador | HU-05 |
 | Ingresar / cerrar sesión | Público | HU-08 |
@@ -72,6 +75,36 @@ El plan gratuito de Render duerme el servicio: la primera consulta puede tardar 
 - **Sesión (HU-08):** el token solo viaja en las peticiones protegidas; cualquier 401 lleva al login con el aviso "Sesión terminada" (sesión cerrada o inactiva más de 30 min); cerrar sesión la invalida en el servidor y borra de la pantalla los datos de la operación.
 - **Idempotencia:** el registro de eventos envía `Idempotency-Key`; si falla por red y se reintenta, el backend no duplica el movimiento.
 - **Validación en el navegador** antes de llamar al backend (campos obligatorios, formato de guía, fechas), y los errores del backend se muestran con su `detail`.
+- **Recogidas (HU-20):** `/api/pickups/**` se dirige a API 1. El horario público (`GET /operating-hours`) define días, franjas, anticipación, horizonte y zona horaria. La solicitud devuelve el número `RC` y el código de gestión una sola vez; el operador debe entregárselo al remitente. Sin sesión de operador se usa `POST /api/pickups/self-service`: la guía solo puede vincularla un operador, para evitar vincular una guía ajena sin acreditar titularidad.
+- Con el número y la cabecera `X-Codigo-Gestion`, el remitente consulta `GET /api/pickups/self-service/{numero}`, reprograma fecha y franja con `PUT /{numero}/schedule` o cancela con `POST /{numero}/cancel`, ambos bajo el mismo prefijo. El código se mantiene solo en memoria y se borra al salir; no se guarda en la URL ni en almacenamiento local. Un 404 no distingue entre número y código incorrectos; un 429 indica exceso de intentos.
+- La lista (`GET /api/pickups?status=...`) y el detalle permiten reprogramar y asignar (`PUT /{numero}/schedule`, con `scheduledDate`, `timeSlot` y `assignedUsername`), cancelar, despachar, completar y vincular una guía. Los operadores asignables se obtienen de `GET /api/pickups/assignees`. La dirección y el contacto solo se muestran cuando API 1 devuelve `accessRestricted: false`.
+- Las escrituras de recogidas responden `202` antes de procesarse: el detalle puede devolver 404 o conservar el estado anterior. Actualizar para confirmar; un comando que pierda una carrera puede rechazarse en el consumidor y no producir cambios.
+- Un envío recogido puede aparecer como `IN_CUSTODY` y su historial como `PICKED_UP`. El paso de custodia solo se muestra si existe ese estado o movimiento. Si la recogida se completa sin guía, la custodia comienza al vincularla.
+- **Comprobante (HU-14):** al registrar, la confirmación permite imprimir el comprobante y copiar el número con aviso de éxito o de error. El comprobante es una sola plantilla que se usa para imprimir y reimprimir: número, código de barras Code 128, fecha, origen, destino, destinatario y remitente. Al imprimir solo se ve ese bloque, en la mitad superior de una hoja carta y en blanco y negro (NFR-20); no muestra teléfono ni dirección (NFR-21).
+- La reimpresión aparece en el resultado del rastreo cuando hay sesión de operador o administrador (`GET /api/shipments/{numero}/receipt`, ruta de la API 1). Un 404 avisa de que el envío aún se está registrando o no existe. Si el portapapeles falla, se pide seleccionar el número manualmente.
+- **Fechas de los reportes:** el formulario pide `GET /api/reports/period-limits` y pone `minDate` como fecha mínima; un periodo anterior al inicio de la operación o de más de `maxDays` días se rechaza antes de llamar a la API. Si la consulta de límites falla, el formulario sigue funcionando y muestra el `detail` del 400 del servidor.
+- **Retrasos en días y horas:** la pantalla de envíos retrasados muestra "86 d 4 h de 1 d esperadas" y "+85 d 4 h" usando los textos que envía la API; con una respuesta antigua que solo trae horas, los calcula en el navegador con la misma regla. Los tramos de ruta siguen en horas.
+- **Privacidad del rastreo:** el rastreo sigue siendo público, pero sin sesión la API devuelve los nombres enmascarados y sin dirección; la pantalla avisa "Por privacidad, los nombres se muestran parcialmente" y, en un envío entregado sin dirección, muestra "Entregado en <ciudad>". Con sesión de operador la consulta va con token y se ve la respuesta completa. Un 429 muestra "Demasiadas consultas; espera N segundos".
+
+## Pruebas
+
+```bash
+node --test tests/*.test.cjs
+```
+
+La impresión del comprobante se verifica aparte, porque necesita un navegador. Con Edge
+instalado (o `MSEDGE_PATH` apuntando a su ejecutable):
+
+```bash
+node tests/print/print-check.cjs    # media hoja carta y una sola página (NFR-20)
+node tests/print/barcode-check.cjs  # ZXing lee el código de barras y devuelve el número
+```
+
+`print-check` toma el CSS y la plantilla de `index.html`, genera el PDF con Edge sin
+ventana y mide la caja en modo impresión. `barcode-check` carga ZXing desde la CDN en el
+mismo Edge y decodifica varios números. Los archivos generados quedan en
+`tests/print/out/`, que no se versiona. La lectura en papel sigue siendo una comprobación
+manual con la cámara o un lector.
 
 ## Publicarlo
 

@@ -28,7 +28,7 @@ function component(props, responses = []) {
 test('API 2 owns tracking and reports, not registration, auth or logistics', () => {
   const { app } = component({ apiBaseUrl: 'https://original.example/', reportsApiBaseUrl: 'https://reports.example/' });
   for (const route of ['/api/tracking/TF123', '/api/reports/transit-times?from=2026-10-01',
-    '/api/reports/shipment-volume', '/api/reports/delayed-shipments']) {
+    '/api/reports/shipment-volume', '/api/reports/delayed-shipments', '/api/reports/period-limits']) {
     assert.equal(app.apiBaseFor(route), 'https://reports.example');
   }
   for (const route of ['/api/auth/login', '/api/auth/sesion', '/api/auth/logout', '/api/shipments',
@@ -61,6 +61,15 @@ test('protected reports renew session in API 1 and pass the same JWT to API 2', 
   assert.equal(requests[0].url, 'https://original.example/api/auth/sesion');
   assert.equal(requests[1].url, 'https://reports.example/api/reports/delayed-shipments');
   for (const request of requests) assert.equal(request.options.headers.Authorization, 'Bearer shared-jwt');
+});
+
+test('period limits is requested from API 2 with the operator token', async () => {
+  const { app, requests } = component({ apiBaseUrl: 'https://original.example', reportsApiBaseUrl: 'https://reports.example' });
+  app.state.token = 'shared-jwt';
+  await app.api('/api/reports/period-limits');
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].url, 'https://reports.example/api/reports/period-limits');
+  assert.equal(requests[1].options.headers.Authorization, 'Bearer shared-jwt');
 });
 
 test('failed session verification stops the report request', async () => {

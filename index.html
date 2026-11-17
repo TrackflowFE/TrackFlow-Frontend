@@ -25,7 +25,8 @@ a:hover { color: #f4711a; }
   .tf-main-inner { padding: 28px 16px 48px !important; }
   .tf-app-header { padding: 12px 16px !important; gap: 10px !important; }
   .tf-app-logo { height: 34px !important; }
-  .tf-app-nav { display: none !important; }
+  .tf-app-nav { display: flex !important; order: 3; flex-basis: 100%; flex-wrap: wrap; }
+  .tf-app-header { flex-wrap: wrap; }
   .tf-event-hero { margin: -28px -16px 24px !important; padding: 28px 18px 26px !important; }
   .tf-event-hero h1 { font-size: 36px !important; max-width: 10ch !important; }
   .tf-event-layout { grid-template-columns: 1fr !important; gap: 18px !important; }
@@ -191,9 +192,42 @@ a:hover { color: #f4711a; }
   background: #f7f9fc;
   border-color: rgba(27,75,143,.22);
 }
+/* HU-14: el comprobante vive oculto en pantalla y es lo único visible al imprimir. */
+.tf-comprobante { display: none; }
+@media print {
+  @page { size: letter portrait; margin: 10mm; }
+  body * { visibility: hidden; }
+  /* El resto de la aplicación se saca del flujo: si solo se ocultara, su altura
+     seguiría generando páginas en blanco detrás del comprobante. */
+  .tf-app-root { display: block !important; min-height: 0 !important; }
+  .tf-app-root > header, .tf-app-root > footer, .tf-app-root main { display: none !important; }
+  .tf-comprobante, .tf-comprobante * { visibility: visible; }
+  .tf-comprobante {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 190mm;
+    max-height: 125mm;
+    box-sizing: border-box;
+    padding: 6mm;
+    border: 1pt solid #000;
+    background: #fff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  .tf-comprobante-titulo { font-size: 12pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .tf-comprobante-numero { font-size: 20pt; font-weight: 700; letter-spacing: .12em; margin: 2mm 0 1mm; font-variant-numeric: tabular-nums; }
+  .tf-comprobante-barras { display: block; width: 90mm; height: 18mm; margin: 0 0 3mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .tf-comprobante-fila { display: flex; gap: 4mm; border-top: .5pt solid #000; padding: 1mm 0; }
+  .tf-comprobante-fila > span:first-child { width: 32mm; flex: none; font-weight: 700; }
+  .tf-comprobante-pie { margin-top: 3mm; border-top: 1pt solid #000; padding-top: 2mm; }
+}
 </style>
 </helmet>
-<div style="--color-accent:#1b4b8f;--color-accent-100:#e9f0fa;--color-accent-200:#cfe0f3;--color-accent-600:#163d76;--color-accent-700:#12305c;--color-accent-800:#0e2646;--color-accent-2:#f4711a;--color-accent-2-100:#fdeee1;--color-accent-2-800:#7a3606;min-height:100vh;display:flex;flex-direction:column;background:#f2f2f3;color:#1d1f20;font-family:var(--font-body);font-size:16px">
+<div class="tf-app-root" style="--color-accent:#1b4b8f;--color-accent-100:#e9f0fa;--color-accent-200:#cfe0f3;--color-accent-600:#163d76;--color-accent-700:#12305c;--color-accent-800:#0e2646;--color-accent-2:#f4711a;--color-accent-2-100:#fdeee1;--color-accent-2-800:#7a3606;min-height:100vh;display:flex;flex-direction:column;background:#f2f2f3;color:#1d1f20;font-family:var(--font-body);font-size:16px">
 
   <header class="tf-app-header" style="display:flex;align-items:center;gap:22px;padding:12px 34px;background:#12305c;color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 1px 0 rgba(255,255,255,.08),0 8px 24px rgba(4,14,32,.18)">
     <button onClick="{{ goHome }}" style="background:none;border:0;padding:0;cursor:pointer;display:block;margin-right:auto">
@@ -201,6 +235,8 @@ a:hover { color: #f4711a; }
     </button>
     <nav class="tf-app-nav" style="display:flex;align-items:center;gap:6px">
       <button onClick="{{ goHome }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff" style-hover="background:rgba(255,255,255,.12)">Rastrear</button>
+      <button onClick="{{ goRecogida }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Pedir recogida</button>
+      <button onClick="{{ goMiRecogida }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Mi recogida</button>
       <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
       <div style="position:relative" ref="{{ opsRef }}">
         <button onClick="{{ toggleOps }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff;display:inline-flex;align-items:center;gap:7px" style-hover="background:rgba(255,255,255,.12)">
@@ -210,6 +246,7 @@ a:hover { color: #f4711a; }
         <sc-if value="{{ opsOpen }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:#f7f7f8;border:1px solid rgba(29,31,32,.3);box-shadow:var(--shadow-md);z-index:40;display:flex;flex-direction:column">
             <button onClick="{{ goNuevo }}" style="text-align:left;padding:11px 14px;background:none;border:0;cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar envío</button>
+            <button onClick="{{ goRecogidas }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20">Recogidas</button>
             <button onClick="{{ goEvento }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar evento</button>
             <button onClick="{{ goReporte }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Volumen de envíos</button>
                         <button onClick="{{ goRetrasados }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Envíos retrasados</button>
@@ -369,6 +406,14 @@ a:hover { color: #f4711a; }
             <p style="margin:0 0 4px;color:rgba(29,31,32,.7);font-size:14px">Verifica que esté bien escrito. La guía tiene la forma <strong>TF</strong> seguida de 12 caracteres, por ejemplo TFA1B2C3D4E5F6.</p>
             <p style="margin:0;font-size:13px;color:rgba(29,31,32,.5)">Consultaste: {{ q }}</p>
             <code style="display:block;margin-top:10px;font-size:11px;color:rgba(29,31,32,.45)">{{ diag }}</code>
+            <sc-if value="{{ puedeReimprimir }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px">
+                <button onClick="{{ reimprimirComprobante }}" class="btn btn-secondary">Reimprimir comprobante</button>
+                <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                  <span role="status" style="font-size:12px;color:#7a3606">{{ copied }}</span>
+                </sc-if>
+              </div>
+            </sc-if>
           </div>
         </sc-if>
 
@@ -376,7 +421,15 @@ a:hover { color: #f4711a; }
           <div class="blueprint" style="padding:22px;max-width:620px;border-color:#f4711a;background:#fdeee1">
             <h4 style="margin:0 0 4px;color:#7a3606">No pudimos contactar el servicio</h4>
             <p style="margin:0 0 12px;font-size:13px;color:#7a3606">{{ netError }}</p>
-            <button onClick="{{ retry }}" class="btn btn-secondary">Reintentar</button>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button onClick="{{ retry }}" class="btn btn-secondary">Reintentar</button>
+              <sc-if value="{{ puedeReimprimir }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ reimprimirComprobante }}" class="btn btn-secondary">Reimprimir comprobante</button>
+              </sc-if>
+              <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                <span role="status" style="font-size:12px;color:#7a3606">{{ copied }}</span>
+              </sc-if>
+            </div>
           </div>
         </sc-if>
 
@@ -399,7 +452,7 @@ a:hover { color: #f4711a; }
               <h3 style="margin:18px 0 3px;font-size:21px;letter-spacing:.02em">{{ frase }}</h3>
               <p style="margin:0;font-size:13px;color:rgba(29,31,32,.62)">{{ fraseSub }}</p>
 
-              <div class="tf-stepper-grid" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin:24px 0 4px">
+              <div class="tf-stepper-grid" style="{{ pasosGrid }}">
                 <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="6">
                   <div style="display:flex;flex-direction:column;align-items:center;text-align:center">
                     <div style="position:relative;width:100%;height:30px;display:flex;align-items:center;justify-content:center">
@@ -441,6 +494,10 @@ a:hover { color: #f4711a; }
                   <div style="font-size:13px;color:rgba(29,31,32,.62);margin-top:2px">{{ t_destinatario }}</div>
                 </div>
               </div>
+
+              <sc-if value="{{ t_restricted }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:10px 0 0;font-size:11px;color:rgba(29,31,32,.5)">Por privacidad, los nombres se muestran parcialmente.</p>
+              </sc-if>
 
               <sc-if value="{{ hayRuta }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(29,31,32,.14)">
@@ -484,6 +541,12 @@ a:hover { color: #f4711a; }
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg>
                   Compartir seguimiento
                 </button>
+                <sc-if value="{{ puedeReimprimir }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ reimprimirComprobante }}" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:9px;height:auto;min-height:44px;padding:10px 16px;white-space:nowrap">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Reimprimir comprobante
+                  </button>
+                </sc-if>
                 <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
                   <span style="font-size:12px;color:#1c5130">{{ copied }}</span>
                 </sc-if>
@@ -570,9 +633,14 @@ a:hover { color: #f4711a; }
               <span class="tag" style="background:#fdeee1;color:#7a3606">{{ c_procesamiento }}</span>
               <span style="font-size:12px;color:rgba(29,31,32,.6)">{{ c_nota }}</span>
             </div>
-            <div style="display:flex;gap:10px;margin-top:20px">
+            <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center">
               <button onClick="{{ verCreado }}" class="btn btn-primary" style="background:#f4711a;border-color:#f4711a;color:#fff" style-hover="background:#d9600f;border-color:#d9600f">Ver seguimiento</button>
+              <button onClick="{{ imprimirComprobante }}" class="btn btn-secondary">Imprimir comprobante</button>
+              <button onClick="{{ copiarNumeroCreado }}" class="btn btn-secondary">Copiar número</button>
               <button onClick="{{ otroEnvio }}" class="btn btn-secondary">Registrar otro</button>
+              <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+                <span role="status" style="font-size:12px;color:#1c5130">{{ copied }}</span>
+              </sc-if>
             </div>
           </div>
         </sc-if>
@@ -905,10 +973,10 @@ a:hover { color: #f4711a; }
             </div>
             <div class="tf-rep-filtros" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end">
               <div class="field" style="margin:0"><label>Desde</label>
-                <input class="input" type="date" value="{{ repDesde }}" max="{{ repHoyIso }}" onChange="{{ onRepDesde }}">
+                <input class="input" type="date" value="{{ repDesde }}" min="{{ repMinIso }}" max="{{ repHoyIso }}" onChange="{{ onRepDesde }}">
               </div>
               <div class="field" style="margin:0"><label>Hasta (inclusive)</label>
-                <input class="input" type="date" value="{{ repHasta }}" max="{{ repHoyIso }}" onChange="{{ onRepHasta }}">
+                <input class="input" type="date" value="{{ repHasta }}" min="{{ repMinIso }}" max="{{ repHoyIso }}" onChange="{{ onRepHasta }}">
               </div>
               <button type="submit" class="btn btn-primary" disabled="{{ repLoading }}" style="min-height:44px;padding:0 26px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff;border-radius:4px" style-hover="background:#d9600f;border-color:#d9600f">{{ repBoton }}</button>
             </div>
@@ -1150,10 +1218,10 @@ a:hover { color: #f4711a; }
             </div>
             <div class="tf-rep-filtros" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end">
               <div class="field" style="margin:0"><label>Desde</label>
-                <input class="input" type="date" value="{{ tieDesde }}" max="{{ tieHoyIso }}" onChange="{{ onTieDesde }}">
+                <input class="input" type="date" value="{{ tieDesde }}" min="{{ repMinIso }}" max="{{ tieHoyIso }}" onChange="{{ onTieDesde }}">
               </div>
               <div class="field" style="margin:0"><label>Hasta (inclusive)</label>
-                <input class="input" type="date" value="{{ tieHasta }}" max="{{ tieHoyIso }}" onChange="{{ onTieHasta }}">
+                <input class="input" type="date" value="{{ tieHasta }}" min="{{ repMinIso }}" max="{{ tieHoyIso }}" onChange="{{ onTieHasta }}">
               </div>
               <button type="submit" class="btn btn-primary" disabled="{{ tieLoading }}" style="min-height:44px;padding:0 26px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff;border-radius:4px" style-hover="background:#d9600f;border-color:#d9600f">{{ tieBoton }}</button>
             </div>
@@ -1256,6 +1324,100 @@ a:hover { color: #f4711a; }
       </section>
     </sc-if>
 
+    <!-- ══ RECOGIDAS ══ -->
+    <sc-if value="{{ isRecogida }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Recogida a domicilio</div>
+        <h1 style="margin:0 0 8px">Solicitar recogida</h1>
+        <p>Solicita una visita para recoger tu paquete. La dirección y el contacto solo serán visibles para el remitente y el operador asignado.</p>
+        <sc-if value="{{ pickupCreated }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-status-success" role="status"><div><strong>Solicitud aceptada: {{ pickupCreatedNumber }}</strong><div>Estado: {{ pickupCreatedStatus }}. La recogida se está procesando; puede tardar en aparecer.</div><p>Código de gestión: <strong>{{ pickupCreatedCode }}</strong><br>Guárdalo junto con el número de recogida: no se volverá a mostrar. Si eres operador, entrégalo al remitente.</p><sc-if value="{{ pickupCreatedGuide }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ verGuiaRecogida }}">Rastrear guía {{ pickupCreatedGuide }}</button></sc-if><button class="btn" onClick="{{ nuevaRecogida }}">Nueva solicitud</button></div></div>
+        </sc-if>
+        <sc-if value="{{ showPickupForm }}" hint-placeholder-val="{{ true }}">
+          <form onSubmit="{{ submitPickup }}" noValidate="{{ true }}" class="tf-panel" style="padding:24px;display:grid;gap:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+              <div class="field" style="position:relative"><label>Ciudad de recogida *</label><input class="input" value="{{ pickupCityText }}" onChange="{{ onPickupCity }}" autoComplete="off" placeholder="Escribe para buscar">
+                <sc-if value="{{ pickupCityOpen }}" hint-placeholder-val="{{ false }}"><ul style="position:absolute;z-index:10;top:100%;left:0;right:0;margin:0;padding:0;list-style:none;background:#fff;border:1px solid #999;max-height:200px;overflow:auto"><sc-for list="{{ pickupCities }}" as="c"><li><button type="button" onClick="{{ c.pick }}" style="width:100%;text-align:left;padding:10px;border:0;background:none;cursor:pointer">{{ c.etiqueta }}</button></li></sc-for></ul></sc-if>
+              </div>
+              <div class="field"><label>Dirección *</label><input class="input" name="address" maxLength="200" required></div>
+              <div class="field"><label>Nombre de contacto *</label><input class="input" name="contactName" maxLength="120" required></div>
+              <div class="field"><label>Teléfono de contacto *</label><input class="input" name="contactPhone" inputMode="numeric" required></div>
+              <div class="field"><label>Fecha *</label><input class="input" name="scheduledDate" type="date" required></div>
+              <div class="field"><label>Franja horaria *</label><select class="input" name="timeSlot" required><option value="">Selecciona una franja</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div>
+              <div class="field"><label>Tamaño del paquete *</label><select class="input" name="packageSize" required><option value="">Selecciona</option><option value="SMALL">Pequeño</option><option value="MEDIUM">Mediano</option><option value="LARGE">Grande</option></select></div>
+              <div class="field"><label>Peso aproximado (kg) *</label><input class="input" name="weightKg" type="number" min="0.1" max="100" step="0.01" required></div>
+              <sc-if value="{{ pickupOperator }}" hint-placeholder-val="{{ false }}"><div class="field"><label>Guía vinculada (opcional)</label><input class="input" name="shipmentTrackingNumber" placeholder="TFA1B2C3D4E5F6"></div></sc-if>
+            </div>
+            <sc-if value="{{ pickupPublic }}" hint-placeholder-val="{{ true }}"><p class="tf-muted-note">Un operador vinculará la guía a tu recogida.</p></sc-if>
+            <p class="tf-muted-note">{{ pickupHoursText }}</p>
+            <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
+            <button type="submit" class="btn btn-primary" disabled="{{ pickupBusy }}" style="justify-self:start;background:#f4711a;border-color:#f4711a;color:#fff">Solicitar recogida</button>
+          </form>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{ isMiRecogida }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Autoservicio / Recogida a domicilio</div><h1 style="margin:0 0 8px">Gestionar mi recogida</h1>
+        <p>Consulta, reprograma o cancela con tu número y código de gestión. Si acabas de solicitarla, puede tardar en aparecer.</p>
+        <form onSubmit="{{ buscarMiPickup }}" class="tf-panel" style="padding:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:end" autoComplete="off">
+          <div class="field" style="flex:1;min-width:200px"><label for="mi-pickup-number">Número de recogida</label><input id="mi-pickup-number" class="input" name="pickupNumber" placeholder="RC seguido de 12 caracteres" required></div>
+          <div class="field" style="flex:1;min-width:180px"><label for="mi-pickup-code">Código de gestión</label><input id="mi-pickup-code" class="input" name="managementCode" type="password" ref="{{ pickupCodeRef }}" autoComplete="off" required></div>
+          <button class="btn btn-primary" type="submit" disabled="{{ pickupLoading }}">Consultar</button>
+        </form>
+        <sc-if value="{{ pickupNotice }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info" role="status">{{ pickupNotice }}</div></sc-if>
+        <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
+        <sc-if value="{{ pickupLoading }}" hint-placeholder-val="{{ false }}"><p>Consultando recogida…</p></sc-if>
+        <sc-if value="{{ pickupDetail }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="padding:24px;margin-top:18px;display:grid;gap:14px">
+            <div><h2 style="margin:0">{{ pdNumber }}</h2><strong>{{ pdStatus }}</strong> · {{ pdCity }} · {{ pdDate }} · {{ pdSlot }}</div>
+            <div>Paquete: {{ pdSize }} · {{ pdWeight }} kg · Guía: {{ pdGuide }}</div>
+            <sc-if value="{{ pdVisible }}" hint-placeholder-val="{{ false }}"><div>Dirección: {{ pdAddress }}<br>Contacto: {{ pdContact }} · {{ pdPhone }}</div></sc-if>
+            <sc-if value="{{ pdRestricted }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">Dirección y contacto no disponibles.</div></sc-if>
+            <sc-if value="{{ pdAwaitingGuide }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">El envío entrará en custodia al vincular la guía.</div></sc-if>
+            <button class="btn" onClick="{{ refrescarPickup }}" style="justify-self:start">Actualizar detalle</button>
+            <sc-if value="{{ pdCanSchedule }}" hint-placeholder-val="{{ false }}">
+              <form onSubmit="{{ programarPickup }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;align-items:end"><div class="field"><label>Fecha</label><input class="input" type="date" name="scheduledDate" defaultValue="{{ pdDate }}" required></div><div class="field"><label>Franja</label><select class="input" name="timeSlot" defaultValue="{{ pdSlot }}" required><option value="">Selecciona</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div><button class="btn" type="submit" disabled="{{ pickupBusy }}">Reprogramar</button></form>
+              <form onSubmit="{{ cancelarPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="reason" maxLength="200" placeholder="Motivo de cancelación (opcional)" style="flex:1;min-width:200px"><button class="btn" type="submit" disabled="{{ pickupBusy }}">Cancelar recogida</button></form>
+            </sc-if>
+            <h3 style="margin:8px 0 0">Historial</h3><sc-for list="{{ pdHistory }}" as="event"><div style="border-top:1px solid #ddd;padding-top:8px">{{ event.label }}</div></sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{ isRecogidas }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Operaciones / Recogidas</div><h1 style="margin:0 0 8px">Consultar recogidas</h1>
+        <p>Busca por número o filtra el listado. Actualiza para consultar el resultado de los comandos encolados.</p>
+        <div class="tf-panel" style="padding:20px;display:grid;gap:16px">
+          <form onSubmit="{{ buscarPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="pickupNumber" placeholder="RC seguido de 12 caracteres" style="flex:1;min-width:220px"><button class="btn btn-primary" type="submit">Buscar</button></form>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label for="pickup-filter">Estado</label><select id="pickup-filter" class="input" value="{{ pickupFilter }}" onChange="{{ filtrarPickups }}" style="width:auto"><option value="">Todos</option><option value="REQUESTED">Solicitada</option><option value="SCHEDULED">Programada</option><option value="ON_THE_WAY">En camino</option><option value="PICKED_UP">Recogida</option><option value="CANCELLED">Cancelada</option></select><button class="btn" onClick="{{ actualizarPickups }}">Actualizar listado</button></div>
+          <sc-if value="{{ pickupNotice }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info" role="status">{{ pickupNotice }}</div></sc-if>
+          <sc-if value="{{ pickupError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pickupError }}</p></sc-if>
+          <sc-if value="{{ pickupLoading }}" hint-placeholder-val="{{ false }}"><p>Cargando recogidas…</p></sc-if>
+          <div style="display:grid;gap:8px"><sc-for list="{{ pickupRows }}" as="row"><button class="btn" onClick="{{ row.open }}" style="text-align:left;white-space:normal">{{ row.label }}</button></sc-for></div>
+        </div>
+        <sc-if value="{{ pickupDetail }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="padding:24px;margin-top:18px;display:grid;gap:14px">
+            <div><h2 style="margin:0">{{ pdNumber }}</h2><strong>{{ pdStatus }}</strong> · {{ pdCity }} · {{ pdDate }} · {{ pdSlot }}</div>
+            <div>Paquete: {{ pdSize }} · {{ pdWeight }} kg · Asignado: {{ pdAssignee }} · Guía: {{ pdGuide }}</div>
+            <sc-if value="{{ pdRestricted }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">Dirección y contacto no visibles para su usuario</div></sc-if>
+            <sc-if value="{{ pdVisible }}" hint-placeholder-val="{{ false }}"><div>Dirección: {{ pdAddress }}<br>Contacto: {{ pdContact }} · {{ pdPhone }}</div></sc-if>
+            <sc-if value="{{ pdAwaitingGuide }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info">El envío entrará en custodia al vincular la guía.</div></sc-if>
+            <button class="btn" onClick="{{ refrescarPickup }}" style="justify-self:start">Actualizar detalle</button>
+            <sc-if value="{{ pdCanSchedule }}" hint-placeholder-val="{{ false }}">
+              <form onSubmit="{{ programarPickup }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;align-items:end"><div class="field"><label>Fecha</label><input class="input" type="date" name="scheduledDate" defaultValue="{{ pdDate }}"></div><div class="field"><label>Franja</label><select class="input" name="timeSlot" defaultValue="{{ pdSlot }}"><option value="">Selecciona</option><sc-for list="{{ pickupSlots }}" as="slot"><option value="{{ slot.value }}">{{ slot.value }}</option></sc-for></select></div><div class="field"><label>Asignar operador</label><select class="input" name="assignedUsername" defaultValue="{{ pdAssigneeValue }}"><option value="">Sin cambiar asignación</option><sc-for list="{{ pickupAssignees }}" as="user"><option value="{{ user.value }}">{{ user.value }}</option></sc-for></select></div><button class="btn" type="submit" disabled="{{ pickupBusy }}">Reprogramar / asignar</button></form>
+              <form onSubmit="{{ cancelarPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="reason" maxLength="200" placeholder="Motivo de cancelación (opcional)" style="flex:1;min-width:200px"><button class="btn" type="submit" disabled="{{ pickupBusy }}">Cancelar recogida</button></form>
+            </sc-if>
+            <sc-if value="{{ pdCanDispatch }}" hint-placeholder-val="{{ false }}"><button class="btn" onClick="{{ despacharPickup }}" disabled="{{ pickupBusy }}" style="justify-self:start">Despachar</button></sc-if>
+            <sc-if value="{{ pdCanComplete }}" hint-placeholder-val="{{ false }}"><button class="btn btn-primary" onClick="{{ completarPickup }}" disabled="{{ pickupBusy }}" style="justify-self:start">Completar recogida</button></sc-if>
+            <sc-if value="{{ pdCanLink }}" hint-placeholder-val="{{ false }}"><form onSubmit="{{ vincularPickup }}" style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" name="trackingNumber" placeholder="Guía TF…" style="flex:1;min-width:200px"><button class="btn" type="submit" disabled="{{ pickupBusy }}">Vincular guía</button></form></sc-if>
+            <h3 style="margin:8px 0 0">Historial</h3><sc-for list="{{ pdHistory }}" as="event"><div style="border-top:1px solid #ddd;padding-top:8px">{{ event.label }}</div></sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <!-- ══ ADMIN ══ -->
     <sc-if value="{{ isAdminScreen }}" hint-placeholder-val="{{ false }}">
       <section style="max-width:640px">
@@ -1279,6 +1441,20 @@ a:hover { color: #f4711a; }
   </main>
   </sc-if>
 
+  <sc-if value="{{ comprobante }}" hint-placeholder-val="{{ false }}">
+    <div class="tf-comprobante">
+      <div class="tf-comprobante-titulo">TrackFlow — Comprobante de envío</div>
+      <div class="tf-comprobante-numero">{{ comp_numero }}</div>
+      <img class="tf-comprobante-barras" src="{{ comp_barras }}" alt="Código de barras del envío">
+      <div class="tf-comprobante-fila"><span>Fecha de registro</span><span>{{ comp_fecha }}</span></div>
+      <div class="tf-comprobante-fila"><span>Origen</span><span>{{ comp_origen }}</span></div>
+      <div class="tf-comprobante-fila"><span>Destino</span><span>{{ comp_destino }}</span></div>
+      <div class="tf-comprobante-fila"><span>Destinatario</span><span>{{ comp_destinatario }}</span></div>
+      <div class="tf-comprobante-fila"><span>Remitente</span><span>{{ comp_remitente }}</span></div>
+      <div class="tf-comprobante-pie">{{ comp_rastreo }}</div>
+    </div>
+  </sc-if>
+
   <footer style="background:#14305c;height:18px"></footer>
 </div>
 
@@ -1286,6 +1462,7 @@ a:hover { color: #f4711a; }
 <script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;},&quot;reportsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-reports-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 2: Reportes&quot;},&quot;shipmentsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-envios-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 1: Envíos&quot;},&quot;logisticsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-logistics.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 3: Logística&quot;}}">
 const ESTADOS = {
   REGISTERED: ['Registrado', '#e7e7ea', '#424244', 'rgba(29,31,32,.3)'],
+  IN_CUSTODY: ['En custodia', '#e9f0fa', '#0e2646', '#1b4b8f'],
   AT_DISTRIBUTION_CENTER: ['En centro de origen', '#e9f0fa', '#0e2646', '#1b4b8f'],
   IN_TRANSIT: ['En tránsito', '#e9f0fa', '#0e2646', '#1b4b8f'],
   AT_DESTINATION_CENTER: ['En centro de destino', '#e9f0fa', '#0e2646', '#1b4b8f'],
@@ -1293,6 +1470,7 @@ const ESTADOS = {
   DELIVERED: ['Entregado', '#e2f2e6', '#1c5130', '#2f7d4f']
 };
 const TIPOS = {
+  PICKED_UP: 'Recogido a domicilio',
   RECEIVED_AT_CENTER: 'Recibido en centro',
   DISPATCHED: 'Despachado',
   ARRIVED_AT_DESTINATION_CENTER: 'Llegada al centro destino',
@@ -1301,6 +1479,7 @@ const TIPOS = {
 };
 const PASOS = [
   ['REGISTERED', 'Registrado', 'Registrado y pendiente de recolección', 'El envío fue registrado y está pendiente de recolección.'],
+  ['IN_CUSTODY', 'Custodia', 'En custodia de la empresa', 'El paquete fue recogido en la dirección del remitente y está en custodia de la empresa.'],
   ['AT_DISTRIBUTION_CENTER', 'Centro origen', 'En el centro de origen', 'El paquete fue recibido en el centro de origen y está siendo clasificado.'],
   ['IN_TRANSIT', 'Tránsito', 'En camino a la ciudad de destino', 'El paquete va en camino a la ciudad de destino.'],
   ['AT_DESTINATION_CENTER', 'Centro destino', 'Llegó al centro de destino', 'El paquete llegó al centro de la ciudad de destino.'],
@@ -1315,6 +1494,131 @@ const DOC_HINTS = {
   NIT: 'NIT: 9 o 10 dígitos, opcionalmente con dígito de verificación (890903938-8).'
 };
 const TN_RE = /^TF[A-Z0-9]{12}$/;
+const PICKUP_RE = /^RC[A-Z0-9]{12}$/;
+const PICKUP_STATES = { REQUESTED: 'Solicitada', SCHEDULED: 'Programada', ON_THE_WAY: 'En camino', PICKED_UP: 'Recogida', CANCELLED: 'Cancelada' };
+const PICKUP_EVENTS = { CREATED: 'Solicitada', SCHEDULED: 'Programada', RESCHEDULED: 'Reprogramada', ASSIGNED: 'Asignada', DISPATCHED: 'Despachada', COMPLETED: 'Recogida', CANCELLED: 'Cancelada', REJECTED: 'Rechazada', SHIPMENT_LINKED: 'Guía vinculada' };
+
+function validarHorarioRecogida(date, slot, hours, now = new Date()) {
+  if (!hours || !Array.isArray(hours.slots) || !Array.isArray(hours.days) || !hours.timeZone) return 'No se pudo cargar el horario de recogidas.';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Selecciona una fecha válida.';
+  const day = new Date(date + 'T00:00:00Z');
+  if (isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) return 'Selecciona una fecha válida.';
+  if (!hours.slots.includes(slot)) return 'Selecciona una franja del horario de atención.';
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: hours.timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  const today = p.year + '-' + p.month + '-' + p.day;
+  const todayMs = Date.parse(today + 'T00:00:00Z');
+  const delta = (day.getTime() - todayMs) / 86400000;
+  if (delta < 0) return 'La fecha de la recogida ya pasó.';
+  if (!hours.days.includes(day.getUTCDay() || 7)) return 'No se recoge ese día.';
+  if (delta > hours.horizonDays) return 'La fecha está fuera del horizonte de programación.';
+  if (delta === 0) {
+    const start = slot.slice(0, 5).split(':').map(Number);
+    const seconds = start[0] * 3600 + start[1] * 60;
+    if (seconds * 1000 < (Number(p.hour) * 3600 + Number(p.minute) * 60 + Number(p.second) + hours.leadTimeHours * 3600) * 1000 + now.getUTCMilliseconds()) return 'No hay tiempo suficiente para programar esa franja.';
+  }
+  return '';
+}
+
+// ── HU-14: comprobante imprimible ──
+// Code 128, subconjunto B: cubre "TF" + 12 caracteres A–Z/0–9, que es el formato de guía.
+const CODE128 = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+  '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+  '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+  '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+  '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
+];
+const CODE128_INICIO_B = 104;
+const CODE128_PARADA = 106;
+
+// Anchuras alternas barra/espacio, empezando por barra: inicio B, datos, control (módulo 103) y parada.
+function codigo128(texto) {
+  const datos = String(texto == null ? '' : texto).toUpperCase();
+  const valores = [];
+  for (const ch of datos) {
+    const code = ch.charCodeAt(0);
+    if (code < 32 || code > 126) throw new Error('Carácter no representable en Code 128 B: ' + ch);
+    valores.push(code - 32);
+  }
+  let suma = CODE128_INICIO_B;
+  valores.forEach((valor, i) => { suma += valor * (i + 1); });
+  const control = suma % 103;
+  const patrones = [CODE128[CODE128_INICIO_B]]
+    .concat(valores.map(valor => CODE128[valor]))
+    .concat([CODE128[control], CODE128[CODE128_PARADA]]);
+  return patrones.join('').split('').map(Number);
+}
+
+// Imagen y no barras con fondos de color: los navegadores no imprimen fondos por defecto.
+function codigoBarrasSvg(texto) {
+  const anchos = codigo128(texto);
+  const silencio = 10;
+  const altoBarra = 60;
+  const altoTexto = 18;
+  const total = anchos.reduce((suma, ancho) => suma + ancho, 0) + silencio * 2;
+  let x = silencio;
+  let barras = '';
+  anchos.forEach((ancho, i) => {
+    if (i % 2 === 0) barras += '<rect x="' + x + '" y="0" width="' + ancho + '" height="' + altoBarra + '" fill="#000"/>';
+    x += ancho;
+  });
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + total + '" height="' + (altoBarra + altoTexto)
+    + '" viewBox="0 0 ' + total + ' ' + (altoBarra + altoTexto) + '" shape-rendering="crispEdges">'
+    + '<rect width="100%" height="100%" fill="#fff"/>' + barras
+    + '<text x="' + (total / 2) + '" y="' + (altoBarra + 14) + '" text-anchor="middle" font-family="monospace" font-size="12" fill="#000">'
+    + String(texto) + '</text></svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function urlRastreoPublica() {
+  try {
+    if (typeof location !== 'undefined' && location && location.origin) return location.origin + location.pathname;
+  } catch (e) {}
+  return 'la página de rastreo de TrackFlow';
+}
+
+// Única fuente de lo que se imprime: copia solo los campos permitidos y fija la zona horaria.
+function vistaComprobante(receipt, urlPublica) {
+  const r = receipt || {};
+  const numero = r.trackingNumber || '';
+  let fecha = '';
+  if (r.registeredAt) {
+    const d = new Date(r.registeredAt);
+    if (!isNaN(d.getTime())) {
+      fecha = new Intl.DateTimeFormat('es-CO', {
+        timeZone: 'America/Bogota', year: 'numeric', month: 'long', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      }).format(d);
+    }
+  }
+  return {
+    numero,
+    barras: numero ? codigoBarrasSvg(numero) : '',
+    fecha,
+    origen: r.originCity || '',
+    destino: r.destinationCity || '',
+    destinatario: r.recipientName || '',
+    remitente: r.senderName || '',
+    rastreo: 'Consulte su envío en ' + (urlPublica || urlRastreoPublica()) + ' con este número.'
+  };
+}
+
+// Retrasos: días y, si queda una parte menor a un día, horas. Sin minutos.
+function diasYHoras(horas) {
+  const total = Math.max(0, Math.floor(Number(horas) || 0));
+  const dias = Math.floor(total / 24);
+  const resto = total % 24;
+  if (dias > 0) return resto > 0 ? dias + ' d ' + resto + ' h' : dias + ' d';
+  if (resto > 0) return resto + ' h';
+  return 'menos de 1 h';
+}
 
 // Claves en inglés: así las devuelve el backend en missingFields (contrato en inglés).
 const FIELD_MAP = {
@@ -1347,6 +1651,7 @@ class Component extends DCLogic {
     this.formRef = React.createRef();
     this.evFormRef = React.createRef();
     this.loginFormRef = React.createRef();
+    this.pickupCodeRef = React.createRef();
     this.state = {
       route: 'home', q: '', qError: '', opsOpen: false,
       loading: false, notFound: false, netError: '', tracking: null,
@@ -1356,18 +1661,41 @@ class Component extends DCLogic {
       remTipo: 'CC', desTipo: 'CC',
       remCityText: '', desCityText: '', remCityId: null, desCityId: null,
       remCities: [], desCities: [], remOpen: false, desOpen: false,
-      submitting: false, shipError: '', shipErrorTitle: '', shipMissing: [], fieldErrors: {}, created: null, createdEstado: '',
+      submitting: false, shipError: '', shipErrorTitle: '', shipMissing: [], fieldErrors: {}, created: null, createdEstado: '', comprobante: null,
+      repLimites: null,
       useFecha: false, evSubmitting: false, evError: '', evErrorTitle: '', evOk: null, evTnDefault: '',
       loginSubmitting: false, loginError: '', loginErrorTitle: '',
       adminLoading: false, adminResult: null, adminError: '',
       repDesde: '', repHasta: '', repPreset: '', repLoading: false, repData: null, repError: '', repErrorTitle: '', retData: null, retLoading: false, retError: '', retErrorTitle: '',
-      tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: ''
+      tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: '',
+      pickupCityText: '', pickupCityId: null, pickupCities: [], pickupOpen: false, pickupHours: null,
+      pickupCreated: null, pickupCreatedGuide: '', pickupError: '', pickupNotice: '', pickupBusy: false,
+      pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: [], pickupCode: ''
     };
   }
 
-  componentWillUnmount() { document.removeEventListener('mousedown', this.onDocDown, true); }
+  componentWillUnmount() { this._pickupSession = (this._pickupSession || 0) + 1; document.removeEventListener('mousedown', this.onDocDown, true); window.removeEventListener('beforeunload', this.onBeforeUnload); clearTimeout(this._ct_pickup); }
+  onBeforeUnload = (e) => {
+    if (this.state.route === 'recogida' && (this.state.pickupBusy || this.state.pickupCreated)) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+  setState(update, cb) {
+    const patch = typeof update === 'function' ? update(this.state) : update;
+    if (patch.route && patch.route !== this.state.route && ['recogida', 'mi-recogida', 'recogidas'].includes(this.state.route)) {
+      if (this.state.route === 'recogida' && this.state.pickupBusy) return;
+      if (this.state.route === 'recogida' && this.state.pickupCreated && !window.confirm('Guarda el número y el código de gestión antes de salir. ¿Deseas salir?')) return;
+      this._pickupSession = (this._pickupSession || 0) + 1;
+      clearTimeout(this._ct_pickup);
+      super.setState({ pickupCode: '', pickupCreated: null, pickupCreatedGuide: '', pickupDetail: null, pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupCityText: '', pickupCityId: null, pickupCities: [], ...patch }, cb);
+    } else {
+      super.setState(patch, cb);
+    }
+  }
   componentDidMount() {
     document.addEventListener('mousedown', this.onDocDown, true);
+    window.addEventListener('beforeunload', this.onBeforeUnload);
     try {
       const t = localStorage.getItem('tf_token'), r = localStorage.getItem('tf_roles');
       if (t) this.setState({ token: t, roles: r || 'OPERADOR' }, () => this.verificarSesion());
@@ -1385,12 +1713,15 @@ class Component extends DCLogic {
   }
 
   olvidarSesion() {
+    this._pickupSession = (this._pickupSession || 0) + 1;
+    clearTimeout(this._ct_pickup);
     try { localStorage.removeItem('tf_token'); localStorage.removeItem('tf_roles'); } catch (e) {}
     // Se borran también los datos operativos en pantalla: tras cerrar sesión no debe
     // quedar nada de la operación visible (ni volviendo con el botón atrás).
-    this.setState({ token: null, roles: '', usuario: '', created: null, evCtx: null, acciones: [], ubicacionActual: null,
+    this.setState({ token: null, roles: '', usuario: '', created: null, comprobante: null, evCtx: null, acciones: [], ubicacionActual: null,
       tipoSel: '', centroId: null, evOk: null, evClave: null, adminResult: null, opsOpen: false, userOpen: false,
-      repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '' });
+      repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '',
+      pickupCreated: null, pickupCreatedGuide: '', pickupCode: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
   }
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
@@ -1400,7 +1731,8 @@ class Component extends DCLogic {
     if (/^\/api\/(tracking|reports)(\/|\?|$)/.test(path)) return 'reports';
     if (/^\/api\/centers(\/|\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/(events|route|actions)(\/|\?|$)/.test(path)) return 'logistics';
-    if (/^\/api\/(auth|cities)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)) return 'shipments';
+    if (/^\/api\/(auth|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)
+      || /^\/api\/shipments\/[^\/?]+\/receipt(\?|$)/.test(path)) return 'shipments';
     return null;
   }
 
@@ -1425,6 +1757,7 @@ class Component extends DCLogic {
     }
     if (conToken) headers['Authorization'] = 'Bearer ' + this.state.token;
     if (opts.idempotencia) headers['Idempotency-Key'] = opts.idempotencia;
+    if (opts.codigoGestion) headers['X-Codigo-Gestion'] = opts.codigoGestion;
     const ctrl = new AbortController();
     const ms = opts.timeout || 10000;
     const timer = setTimeout(() => ctrl.abort(), ms);
@@ -1445,7 +1778,7 @@ class Component extends DCLogic {
     // HU-08: si el servidor rechaza el token (sesión cerrada, vencida o inactiva más de
     // 30 min), se descarta y se lleva al login con la explicación.
     if (res.status === 401 && conToken && !opts.silencioso) this.sesionTerminada();
-    return { ok: res.ok, status: res.status, data };
+    return { ok: res.ok, status: res.status, data, retryAfter: res.headers && typeof res.headers.get === 'function' ? res.headers.get('Retry-After') : null };
   }
 
   sesionTerminada() {
@@ -1459,6 +1792,23 @@ class Component extends DCLogic {
   goHome = () => this.setState({ route: 'home', qError: '' });
   goNuevo = () => this.setState(this.state.token ? { route: 'nuevo', opsOpen: false } : { route: 'login', opsOpen: false });
   goEvento = () => this.setState(this.state.token ? { route: 'evento', opsOpen: false } : { route: 'login', opsOpen: false });
+  goRecogida = () => {
+    this.setState({ route: 'recogida', opsOpen: false, pickupError: '', pickupNotice: '' });
+    this.cargarHorarioPickup();
+  };
+  goMiRecogida = () => {
+    this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    if (this.pickupCodeRef.current) this.pickupCodeRef.current.value = '';
+    this.setState({ route: 'mi-recogida', opsOpen: false, pickupError: '', pickupNotice: '', pickupDetail: null, pickupCode: '', pickupLoading: false, pickupBusy: false });
+    this.cargarHorarioPickup();
+  };
+  goRecogidas = () => {
+    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
+    this.setState({ route: 'recogidas', opsOpen: false, pickupError: '', pickupNotice: '', pickupDetail: null });
+    this.cargarHorarioPickup();
+    this.cargarAsignablesPickup();
+    this.cargarPickups(this.state.pickupFilter);
+  };
   toggleOps = () => this.setState(s => ({ opsOpen: !s.opsOpen }));
   closeOps = () => this.setState({ opsOpen: false });
   opsRef = React.createRef();
@@ -1479,6 +1829,7 @@ class Component extends DCLogic {
   goReporte = () => {
     if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
     this.setState({ route: 'reporte', opsOpen: false });
+    this.cargarLimitesReportes();
     // Al entrar se muestra la última semana, que es la vista más útil para dimensionar.
     if (!this.state.repData && !this.state.repLoading) this.aplicarPreset('semana', true);
   };
@@ -1492,6 +1843,7 @@ class Component extends DCLogic {
   goTiempos = () => {
     if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
     this.setState({ route: 'tiempos', opsOpen: false });
+    this.cargarLimitesReportes();
     // Al entrar se muestra la última semana, igual que en el reporte de volumen.
     if (!this.state.tieData && !this.state.tieLoading) this.aplicarPresetTiempos('semana', true);
   };
@@ -1511,6 +1863,8 @@ class Component extends DCLogic {
   // HU-08: cerrar sesión la invalida en el servidor (el token deja de servir aunque no
   // haya vencido) y además se borra del navegador.
   logout = async () => {
+    if (this.state.route === 'recogida' && this.state.pickupBusy) return;
+    if (this.state.route === 'recogida' && this.state.pickupCreated && !window.confirm('Guarda el número y el código de gestión antes de salir. ¿Deseas salir?')) return;
     const token = this.state.token;
     this.olvidarSesion();
     // HU-08: al cerrar sesión se vuelve a la pantalla de inicio de sesión, sin mensaje de
@@ -1535,10 +1889,12 @@ class Component extends DCLogic {
 
   async fetchTracking(tn) {
     this.setState({ loading: true, waking: false, notFound: false, netError: '', tracking: null, events: null, eventsLoading: true, diag: '', ruta: null });
+    // Con sesión de operador se pide la vista completa; sin sesión, la pública.
+    const conSesion = !!this.state.token;
     let r = null, lastErr = null;
     for (let intento = 0; intento < 3; intento++) {
       try {
-        r = await this.api('/api/tracking/' + tn, { timeout: intento === 0 ? 12000 : 45000, publico: true });
+        r = await this.api('/api/tracking/' + tn, { timeout: intento === 0 ? 12000 : 45000, publico: !conSesion });
         break;
       } catch (err) {
         lastErr = err;
@@ -1553,6 +1909,7 @@ class Component extends DCLogic {
     try {
       this.setState({ waking: false, diag: 'GET ' + this.apiBaseFor('/api/tracking/' + tn) + '/api/tracking/' + tn + ' → ' + r.status });
       if (r.status === 404) return this.setState({ loading: false, eventsLoading: false, notFound: true });
+      if (r.status === 429) return this.setState({ loading: false, eventsLoading: false, netError: 'Demasiadas consultas; espera ' + (Number(r.retryAfter) || 60) + ' segundos.' });
       if (!r.ok) return this.setState({ loading: false, eventsLoading: false, netError: (r.data && r.data.detail) || ('El servicio respondió ' + r.status + '.') });
       this.setState({ loading: false, tracking: r.data });
       const ev = await this.api('/api/shipments/' + tn + '/events', { timeout: 20000, publico: true });
@@ -1570,18 +1927,21 @@ class Component extends DCLogic {
 
   // ── ciudades ──
   searchCities = (which, text) => {
-    const key = which === 'rem' ? 'remCityText' : 'desCityText';
-    const idKey = which === 'rem' ? 'remCityId' : 'desCityId';
-    const openKey = which === 'rem' ? 'remOpen' : 'desOpen';
+    const key = which + 'CityText';
+    const idKey = which + 'CityId';
+    const openKey = which + 'Open';
     this.setState({ [key]: text, [idKey]: null, [openKey]: true });
     this.clearFieldError(which + '_city');
     clearTimeout(this['_ct_' + which]);
     if (!text.trim()) return this.setState({ [which + 'Cities']: [] });
     this['_ct_' + which] = setTimeout(async () => {
+      const session = this._pickupSession;
       try {
         const r = await this.api('/api/cities?q=' + encodeURIComponent(text.trim()) + '&onlyCovered=true', { timeout: 6000, publico: true });
+        if (which === 'pickup' && (session !== this._pickupSession || this.state.pickupCityText !== text)) return;
         this.setState({ [which + 'Cities']: Array.isArray(r.data) ? r.data : [] });
       } catch (e) {
+        if (which === 'pickup' && (session !== this._pickupSession || this.state.pickupCityText !== text)) return;
         this.setState({ [which + 'Cities']: [] });
       }
     }, 220);
@@ -1590,6 +1950,142 @@ class Component extends DCLogic {
     this.setState({ [which + 'CityText']: c.label, [which + 'CityId']: c.id, [which + 'Open']: false });
     this.clearFieldError(which + '_city');
   };
+
+  async cargarHorarioPickup() {
+    const session = this._pickupSession;
+    try {
+      const r = await this.api('/api/pickups/operating-hours', { publico: true, timeout: 45000 });
+      if (session !== this._pickupSession) return;
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo cargar el horario de recogidas.');
+      this.setState({ pickupHours: r.data });
+    } catch (e) { if (session === this._pickupSession) this.setState({ pickupHours: null, pickupError: e.message }); }
+  }
+  async cargarAsignablesPickup() {
+    const session = this._pickupSession;
+    try {
+      const r = await this.api('/api/pickups/assignees');
+      if (session !== this._pickupSession) return;
+      if (r.status === 401) return;
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudieron cargar los operadores.');
+      this.setState({ pickupAssignees: Array.isArray(r.data) ? r.data : [] });
+    } catch (e) { if (session === this._pickupSession) this.setState({ pickupAssignees: [], pickupError: e.message }); }
+  }
+  async cargarPickups(status) {
+    const session = this._pickupSession, request = this._pickupListRequest = (this._pickupListRequest || 0) + 1;
+    this.setState({ pickupLoading: true, pickupError: '' });
+    try {
+      const r = await this.api('/api/pickups' + (status ? '?status=' + encodeURIComponent(status) : ''), { timeout: 45000 });
+      if (session !== this._pickupSession || request !== this._pickupListRequest) return;
+      if (r.status === 401) return this.setState({ pickupLoading: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudieron consultar las recogidas.');
+      this.setState({ pickupLoading: false, pickupList: Array.isArray(r.data) ? r.data : [] });
+    } catch (e) { if (session === this._pickupSession && request === this._pickupListRequest) this.setState({ pickupLoading: false, pickupList: [], pickupError: e.message }); }
+  }
+  actualizarPickups = () => this.cargarPickups(this.state.pickupFilter);
+  filtrarPickups = (e) => { const status = e.target.value; this.setState({ pickupFilter: status }); this.cargarPickups(status); };
+  buscarPickup = (e) => {
+    e.preventDefault();
+    const number = String(new FormData(e.target).get('pickupNumber') || '').trim().toUpperCase();
+    if (!PICKUP_RE.test(number)) return this.setState({ pickupDetail: null, pickupError: 'El número debe ser RC seguido de 12 caracteres alfanuméricos.' });
+    this.consultarPickup(number);
+  };
+  buscarMiPickup = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), number = String(f.get('pickupNumber') || '').trim().toUpperCase(), code = String(f.get('managementCode') || '').trim().toUpperCase();
+    if (e.target.elements && e.target.elements.managementCode) e.target.elements.managementCode.value = '';
+    this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    this.setState({ pickupCode: '', pickupDetail: null, pickupNotice: '', pickupLoading: false });
+    if (!PICKUP_RE.test(number)) return this.setState({ pickupError: 'El número debe ser RC seguido de 12 caracteres alfanuméricos.' });
+    if (!code) return this.setState({ pickupError: 'Ingresa el código de gestión.' });
+    this.consultarPickup(number, code);
+  };
+  async consultarPickup(number, code) {
+    const session = this._pickupSession, request = this._pickupDetailRequest = (this._pickupDetailRequest || 0) + 1;
+    const selfService = this.state.route === 'mi-recogida';
+    code = selfService ? (code || this.state.pickupCode) : '';
+    if (selfService && !code) return;
+    this.setState({ pickupLoading: true, pickupError: '', pickupDetail: null });
+    try {
+      const r = await this.api('/api/pickups/' + (selfService ? 'self-service/' : '') + encodeURIComponent(number), { timeout: 45000, publico: selfService, codigoGestion: code });
+      if (session !== this._pickupSession || request !== this._pickupDetailRequest) return;
+      if (r.status === 401 && !selfService) return this.setState({ pickupLoading: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 404 ? 'No se encontró la recogida o el código no coincide. Si acaba de solicitarse, espera y vuelve a consultar.' : r.status === 429 ? 'Demasiados intentos. ' + this.esperaDeReintento(r) : 'No se pudo consultar la recogida.'));
+      this.setState({ pickupLoading: false, pickupDetail: r.data, pickupCode: code });
+    } catch (e) { if (session === this._pickupSession && request === this._pickupDetailRequest) this.setState({ pickupLoading: false, pickupCode: '', pickupError: e.message }); }
+  }
+  refrescarPickup = () => { if (this.state.pickupDetail) this.consultarPickup(this.state.pickupDetail.pickupNumber); };
+  // La API responde 429 con Retry-After: el tiempo que falta para que se libere la cuota.
+  esperaDeReintento = (r) => {
+    const segundos = Number(r && r.retryAfter);
+    if (!Number.isFinite(segundos) || segundos <= 0) return 'Espera antes de volver a intentarlo.';
+    const minutos = Math.max(1, Math.ceil(segundos / 60));
+    return 'Espera ' + minutos + (minutos === 1 ? ' minuto' : ' minutos') + ' antes de volver a intentarlo.';
+  };
+  submitPickup = async (e) => {
+    e.preventDefault();
+    if (this.state.pickupBusy) return;
+    const session = this._pickupSession;
+    const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
+    const operator = !!this.state.token && /OPERADOR|ADMIN/.test(this.state.roles);
+    const body = { address: v('address'), cityId: this.state.pickupCityId, contactName: v('contactName'), contactPhone: v('contactPhone'), scheduledDate: v('scheduledDate'), timeSlot: v('timeSlot'), packageSize: v('packageSize'), weightKg: Number(v('weightKg')), shipmentTrackingNumber: operator ? v('shipmentTrackingNumber').toUpperCase() || null : null };
+    const error = !body.cityId ? 'Selecciona una ciudad de la lista.'
+      : body.address.length < 5 || body.address.length > 200 ? 'La dirección debe tener entre 5 y 200 caracteres.'
+      : body.contactName.length < 3 || body.contactName.length > 120 ? 'El nombre debe tener entre 3 y 120 caracteres.'
+      : !/^[0-9]{7,20}$/.test(body.contactPhone) ? 'El teléfono debe tener entre 7 y 20 dígitos.'
+      : !['SMALL', 'MEDIUM', 'LARGE'].includes(body.packageSize) ? 'Selecciona el tamaño del paquete.'
+      : !Number.isFinite(body.weightKg) || body.weightKg < 0.1 || body.weightKg > 100 ? 'El peso debe estar entre 0.1 y 100 kg.'
+      : body.shipmentTrackingNumber && !TN_RE.test(body.shipmentTrackingNumber) ? 'La guía debe ser TF seguida de 12 caracteres alfanuméricos.'
+      : validarHorarioRecogida(body.scheduledDate, body.timeSlot, this.state.pickupHours);
+    if (error) return this.setState({ pickupError: error });
+    this.setState({ pickupBusy: true, pickupError: '' });
+    try {
+      let r;
+      try {
+        r = await this.api(operator ? '/api/pickups' : '/api/pickups/self-service', { method: 'POST', body, timeout: 45000, publico: !operator });
+      } catch (err) {
+        throw new Error(err.message + '. La solicitud podría haberse aceptado y el código perdido; evita repetirla sin verificar con soporte.');
+      }
+      if (session !== this._pickupSession) return;
+      if (r.status === 401) return this.setState({ pickupBusy: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo solicitar la recogida.');
+      this.setState({ pickupBusy: false, pickupCreated: r.data, pickupCreatedGuide: body.shipmentTrackingNumber || '', pickupCityText: '', pickupCityId: null });
+    } catch (err) { if (session === this._pickupSession) this.setState({ pickupBusy: false, pickupError: err.message }); }
+  };
+  nuevaRecogida = () => { if (window.confirm('Guarda el número y el código de gestión antes de continuar. ¿Deseas iniciar otra solicitud?')) this.setState({ pickupCreated: null, pickupCreatedGuide: '', pickupError: '' }); };
+  verGuiaRecogida = () => { const tn = this.state.pickupCreatedGuide; this.setState({ q: tn, route: 'result' }); this.fetchTracking(tn); };
+  programarPickup = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), date = String(f.get('scheduledDate') || ''), slot = String(f.get('timeSlot') || '');
+    const error = validarHorarioRecogida(date, slot, this.state.pickupHours);
+    if (error) return this.setState({ pickupError: error });
+    const body = { scheduledDate: date, timeSlot: slot };
+    if (this.state.route !== 'mi-recogida') body.assignedUsername = String(f.get('assignedUsername') || '') || null;
+    this.comandoPickup('schedule', 'PUT', body);
+  };
+  cancelarPickup = (e) => { e.preventDefault(); this.comandoPickup('cancel', 'POST', { reason: String(new FormData(e.target).get('reason') || '').trim() || null }); };
+  despacharPickup = () => this.comandoPickup('dispatch', 'POST');
+  completarPickup = () => this.comandoPickup('complete', 'POST');
+  vincularPickup = (e) => {
+    e.preventDefault();
+    const number = String(new FormData(e.target).get('trackingNumber') || '').trim().toUpperCase();
+    if (!TN_RE.test(number)) return this.setState({ pickupError: 'La guía debe ser TF seguida de 12 caracteres alfanuméricos.' });
+    this.comandoPickup('shipment', 'PUT', { trackingNumber: number });
+  };
+  async comandoPickup(action, method, body) {
+    if (!this.state.pickupDetail || this.state.pickupBusy) return;
+    const session = this._pickupSession, request = this._pickupDetailRequest;
+    const number = this.state.pickupDetail.pickupNumber;
+    const selfService = this.state.route === 'mi-recogida';
+    if (selfService && (!this.state.pickupCode || !['schedule', 'cancel'].includes(action))) return;
+    this.setState({ pickupBusy: true, pickupError: '', pickupNotice: '' });
+    try {
+      const r = await this.api('/api/pickups/' + (selfService ? 'self-service/' : '') + encodeURIComponent(number) + '/' + action, { method, body, timeout: 45000, publico: selfService, codigoGestion: selfService ? this.state.pickupCode : '' });
+      if (session !== this._pickupSession || (selfService && request !== this._pickupDetailRequest)) return;
+      if (r.status === 401 && !selfService) return this.setState({ pickupBusy: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 429 ? 'Demasiados intentos. ' + this.esperaDeReintento(r) : 'No se pudo procesar la operación.'));
+      this.setState({ pickupBusy: false, pickupNotice: 'Operación aceptada y en procesamiento. Actualiza el detalle para confirmar el estado.' });
+    } catch (err) { if (session === this._pickupSession && (!selfService || request === this._pickupDetailRequest)) this.setState({ pickupBusy: false, pickupError: err.message }); }
+  }
 
   // ── registrar envío ──
   submitShipment = async (e) => {
@@ -1656,7 +2152,8 @@ class Component extends DCLogic {
   }
 
   verCreado = () => { const tn = this.state.created.trackingNumber; this.setState({ q: tn, route: 'result' }); this.fetchTracking(tn); };
-  otroEnvio = () => this.setState({ created: null, remCityText: '', desCityText: '', remCityId: null, desCityId: null, shipError: '' });
+  otroEnvio = () => this.setState({ created: null, comprobante: null, remCityText: '', desCityText: '', remCityId: null,
+    desCityId: null, shipError: '' });
 
   // ── evento ──
   submitEvent = async (e) => {
@@ -1702,7 +2199,7 @@ class Component extends DCLogic {
       this.setState({ evSubmitting: false, evOk: tn, evClave: null, useFecha: false });
       setTimeout(async () => {
         try {
-          const rt = await this.api('/api/tracking/' + tn, { timeout: 12000, publico: true });
+          const rt = await this.api('/api/tracking/' + tn, { timeout: 12000 });
           if (rt.ok) this.setState({ evCtx: rt.data });
         } catch (e2) {}
         this.cargarAcciones(tn);
@@ -1748,6 +2245,33 @@ class Component extends DCLogic {
     const f = new Date(Date.UTC(y, m - 1, d + dias));
     return f.toISOString().slice(0, 10);
   }
+  diasEntre(desde, hasta) {
+    return Math.round((Date.parse(hasta + 'T00:00:00Z') - Date.parse(desde + 'T00:00:00Z')) / 86400000);
+  }
+  // Los límites vienen del servidor para no ofrecer un periodo que va a rechazar.
+  // Si la consulta falla, el formulario sigue y el 400 del servidor muestra el motivo.
+  async cargarLimitesReportes() {
+    if (this.state.repLimites || this._limitesCargando) return;
+    this._limitesCargando = true;
+    try {
+      const r = await this.api('/api/reports/period-limits', { timeout: 20000 });
+      if (r.ok && r.data) this.setState({ repLimites: r.data });
+    } catch (e) {}
+    this._limitesCargando = false;
+  }
+  validarPeriodo(desde, hasta) {
+    const lim = this.state.repLimites;
+    if (lim && lim.minDate && desde < lim.minDate) {
+      return 'El periodo empieza antes del inicio de la operación (' + lim.minDate + '); no hay envíos anteriores a esa fecha.';
+    }
+    if (lim && lim.maxDays) {
+      const dias = this.diasEntre(desde, hasta) + 1;
+      if (dias > lim.maxDays) {
+        return 'El periodo abarca ' + dias + ' días; el máximo es ' + lim.maxDays + '. Acorte el rango.';
+      }
+    }
+    return '';
+  }
   aplicarPreset(preset, consultar) {
     const hoy = this.hoyColombia();
     const desde = preset === 'hoy' ? hoy : preset === 'semana' ? this.sumarDias(hoy, -6) : hoy.slice(0, 8) + '01';
@@ -1767,6 +2291,8 @@ class Component extends DCLogic {
     if (!repDesde || !repHasta) return this.setState({ repErrorTitle: 'Periodo incompleto', repError: 'Indica la fecha inicial y la final del periodo.' });
     if (repHasta < repDesde) return this.setState({ repErrorTitle: 'Periodo inválido', repError: 'La fecha final no puede ser anterior a la inicial.' });
     if (repDesde > hoy) return this.setState({ repErrorTitle: 'Periodo inválido', repError: 'El periodo no puede empezar en el futuro.' });
+    const fueraDeLimites = this.validarPeriodo(repDesde, repHasta);
+    if (fueraDeLimites) return this.setState({ repErrorTitle: 'Periodo inválido', repError: fueraDeLimites });
     this.setState({ repLoading: true, repError: '', repErrorTitle: '' });
     try {
       const r = await this.api('/api/reports/shipment-volume?from=' + repDesde + '&to=' + repHasta, { timeout: 45000 });
@@ -1805,6 +2331,7 @@ class Component extends DCLogic {
       repMes: () => this.aplicarPreset('mes', true),
       repPresetHoy: preset('hoy'), repPresetSemana: preset('semana'), repPresetMes: preset('mes'),
       repDesde: s.repDesde, repHasta: s.repHasta, repHoyIso: this.hoyColombia(),
+      repMinIso: (s.repLimites && s.repLimites.minDate) || '',
       onRepDesde: this.onRepDesde, onRepHasta: this.onRepHasta, consultarReporte: this.consultarReporte,
       repLoading: s.repLoading, repBoton: s.repLoading ? 'Consultando…' : 'Consultar',
       repError: s.repError, repErrorTitle: s.repErrorTitle,
@@ -1832,7 +2359,10 @@ class Component extends DCLogic {
     const num = (n) => Number(n || 0).toLocaleString('es-CO');
     const lista = d && Array.isArray(d.shipments) ? d.shipments : [];
     const cuenta = (sev) => lista.filter(e => e.severity === sev).length;
-    const estados = { REGISTERED: 'Registrado', AT_DISTRIBUTION_CENTER: 'En centro de distribución', IN_TRANSIT: 'En tránsito', OUT_FOR_DELIVERY: 'En reparto' };
+    const estados = { REGISTERED: 'Registrado', IN_CUSTODY: 'En custodia', AT_DISTRIBUTION_CENTER: 'En centro de distribución', AT_DESTINATION_CENTER: 'En centro de destino', IN_TRANSIT: 'En tránsito', OUT_FOR_DELIVERY: 'En reparto' };
+    // La API nueva manda el texto en días y horas; con una respuesta antigua se calcula
+    // aquí con la misma regla, para que el frontend sirva contra ambas versiones.
+    const texto = (campo, horas) => (campo && campo.text) ? campo.text : diasYHoras(horas);
     const sev = {
       LOW: { label: 'Leve', bg: '#fff4d6', color: '#7a5b00' },
       MODERATE: { label: 'Moderada', bg: '#fdeee1', color: '#7a3606' },
@@ -1861,8 +2391,8 @@ class Component extends DCLogic {
           puntoSub: e.nextStop && e.lastPoint ? 'desde ' + e.lastPoint : '',
           base: e.plannedLegHours ? 'Tramo de ' + num(e.plannedLegHours) + ' h + 25 %' : '',
           destino: e.destinationCity || '—',
-          horas: num(e.hoursStopped) + ' h de ' + num(e.hoursExpected) + ' esperadas',
-          exceso: '+' + num(e.hoursOver) + ' h',
+          horas: texto(e.stopped, e.hoursStopped) + ' de ' + texto(e.expected, e.hoursExpected) + ' esperadas',
+          exceso: '+' + texto(e.over, e.hoursOver),
           sevLabel: v.label,
           sevStyle: { display: 'inline-block', padding: '3px 10px', borderRadius: '3px', fontSize: '12px', fontWeight: '600', letterSpacing: '.04em', background: v.bg, color: v.color }
         };
@@ -1888,6 +2418,8 @@ class Component extends DCLogic {
     if (!tieDesde || !tieHasta) return this.setState({ tieErrorTitle: 'Periodo incompleto', tieError: 'Indica la fecha inicial y la final del periodo.' });
     if (tieHasta < tieDesde) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: 'La fecha final no puede ser anterior a la inicial.' });
     if (tieDesde > hoy) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: 'El periodo no puede empezar en el futuro.' });
+    const fueraDeLimites = this.validarPeriodo(tieDesde, tieHasta);
+    if (fueraDeLimites) return this.setState({ tieErrorTitle: 'Periodo inválido', tieError: fueraDeLimites });
     this.setState({ tieLoading: true, tieError: '', tieErrorTitle: '' });
     try {
       const r = await this.api('/api/reports/transit-times?from=' + tieDesde + '&to=' + tieHasta, { timeout: 45000 });
@@ -1920,6 +2452,7 @@ class Component extends DCLogic {
       tieMes: () => this.aplicarPresetTiempos('mes', true),
       tiePresetHoy: preset('hoy'), tiePresetSemana: preset('semana'), tiePresetMes: preset('mes'),
       tieDesde: s.tieDesde, tieHasta: s.tieHasta, tieHoyIso: this.hoyColombia(),
+      repMinIso: (s.repLimites && s.repLimites.minDate) || '',
       onTieDesde: this.onTieDesde, onTieHasta: this.onTieHasta, consultarTiempos: this.consultarTiempos,
       tieLoading: s.tieLoading, tieBoton: s.tieLoading ? 'Consultando…' : 'Consultar',
       tieError: s.tieError, tieErrorTitle: s.tieErrorTitle,
@@ -2030,7 +2563,8 @@ class Component extends DCLogic {
     if (e.type === 'OUT_FOR_DELIVERY') return e.delivererName ? 'Repartidor: ' + e.delivererName : '';
     if (e.type === 'DELIVERED') {
       const dir = t && t.recipientAddress, ciu = this.ciudadCorta(t && t.destinationCity);
-      return [dir, ciu].filter(Boolean).join(' · ') || 'Entrega realizada';
+      if (dir) return [dir, ciu].filter(Boolean).join(' · ');
+      return ciu ? 'Entregado en ' + ciu : 'Entrega realizada';
     }
     return [e.point, this.ciudadCorta(e.cityName)].filter(Boolean).join(' · ');
   }
@@ -2071,13 +2605,14 @@ class Component extends DCLogic {
 
   copy(text, msg) {
     const done = () => { this.setState({ copied: msg }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 2600); };
+    const fail = () => { this.setState({ copied: 'No se pudo copiar; selecciona el número manualmente' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 4000); };
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, () => {}); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, fail); return; }
     } catch (e) {}
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); done(); } catch (e) {}
+    try { if (document.execCommand('copy')) done(); else fail(); } catch (e) { fail(); }
     document.body.removeChild(ta);
   }
   evTipoRef = React.createRef();
@@ -2120,7 +2655,7 @@ class Component extends DCLogic {
     this._ctxT = setTimeout(async () => {
       this.setState({ ctxLoading: true, ctxNotFound: false });
       try {
-        const r = await this.api('/api/tracking/' + tn, { timeout: 15000, publico: true });
+        const r = await this.api('/api/tracking/' + tn, { timeout: 15000 });
         if (r.status === 404) { this.setState({ ctxLoading: false, evCtx: null, ctxNotFound: true, acciones: [], tipoSel: '', centroId: null }); return; }
         const ctx = r.ok ? r.data : null;
         this.setState({ ctxLoading: false, evCtx: ctx });
@@ -2130,6 +2665,36 @@ class Component extends DCLogic {
   };
 
   copyTn = () => { const t = this.state.tracking; if (t) this.copy(t.trackingNumber, 'Número copiado'); };
+
+  // ── HU-14: comprobante ──
+  avisar = (msg) => {
+    this.setState({ copied: msg });
+    clearTimeout(this._ct);
+    this._ct = setTimeout(() => this.setState({ copied: '' }), 4000);
+  };
+  imprimirComprobante = () => {
+    const receipt = this.state.created && this.state.created.receipt;
+    if (!receipt) return;
+    this.setState({ comprobante: receipt }, () => { try { window.print(); } catch (e) {} });
+  };
+  copiarNumeroCreado = () => {
+    const c = this.state.created;
+    if (c) this.copy(c.trackingNumber, 'Número copiado');
+  };
+  reimprimirComprobante = async () => {
+    // Si la API 2 no encontró el envío, se usa el número que se buscó: la API 1 es
+    // la dueña del registro y puede tenerlo aunque el rastreo todavía no.
+    const t = this.state.tracking;
+    const numero = t && t.trackingNumber ? t.trackingNumber : this.state.q;
+    if (!numero || !TN_RE.test(numero)) return;
+    try {
+      const r = await this.api('/api/shipments/' + encodeURIComponent(numero) + '/receipt', { timeout: 45000 });
+      if (r.status === 401) return;
+      if (r.status === 404) return this.avisar('El envío aún se está registrando o no existe; intenta en unos segundos');
+      if (!r.ok) return this.avisar('No se pudo obtener el comprobante.');
+      this.setState({ comprobante: r.data }, () => { try { window.print(); } catch (e) {} });
+    } catch (e) { this.avisar('No se pudo obtener el comprobante.'); }
+  };
   shareLink = () => {
     const t = this.state.tracking; if (!t) return;
     const url = location.origin + location.pathname + '?guia=' + t.trackingNumber;
@@ -2139,10 +2704,11 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state, t = s.tracking;
     const est = t ? (ESTADOS[t.status] || ESTADOS.REGISTERED) : null;
-    const ORDEN = PASOS.map(p => p[0]);
-    const CORTO = PASOS.map(p => p[1]);
+    const pasosVisibles = PASOS.filter(p => p[0] !== 'IN_CUSTODY' || (t && t.status === 'IN_CUSTODY') || (s.events || []).some(e => e.type === 'PICKED_UP'));
+    const ORDEN = pasosVisibles.map(p => p[0]);
+    const CORTO = pasosVisibles.map(p => p[1]);
     const idx = t ? Math.max(0, ORDEN.indexOf(t.status)) : 0;
-    const paso = PASOS[idx];
+    const paso = pasosVisibles[idx];
     const accs = s.acciones || [];
     const accSel = accs.find(a => a.type === s.tipoSel) || null;
     const accCentros = (accSel && accSel.centers) || [];
@@ -2203,12 +2769,40 @@ class Component extends DCLogic {
       };
     });
     const c = s.created;
+    const comp = s.comprobante ? vistaComprobante(s.comprobante) : null;
     const estadoProc = s.createdEstado === 'REGISTRADO' ? 'Registrado y consultable'
       : s.createdEstado === 'PROCESANDO' ? 'Procesando…' : 'Encolado';
     return {
       ...this.vistaReporte(s),
       ...this.vistaRetrasados(s),
       ...this.vistaTiempos(s),
+      isRecogida: s.route === 'recogida', isRecogidas: s.route === 'recogidas', isMiRecogida: s.route === 'mi-recogida',
+      goRecogida: this.goRecogida, goRecogidas: this.goRecogidas, goMiRecogida: this.goMiRecogida, buscarMiPickup: this.buscarMiPickup, pickupCodeRef: this.pickupCodeRef,
+      pickupCityText: s.pickupCityText, pickupCityOpen: s.pickupOpen && !!s.pickupCityText.trim() && !s.pickupCityId,
+      onPickupCity: e => this.searchCities('pickup', e.target.value),
+      pickupCities: s.pickupCities.map(c => ({ etiqueta: c.label, pick: () => this.pickCity('pickup', c) })),
+      pickupSlots: ((s.pickupHours && s.pickupHours.slots) || []).map(value => ({ value })),
+      pickupHoursText: s.pickupHours ? 'Horario: ' + s.pickupHours.open + '–' + s.pickupHours.close + ' (' + s.pickupHours.timeZone + '). Anticipación: ' + s.pickupHours.leadTimeHours + ' horas; horizonte: ' + s.pickupHours.horizonDays + ' días.' : 'Cargando horario de atención.',
+      pickupCreated: !!s.pickupCreated, showPickupForm: !s.pickupCreated,
+      pickupCreatedNumber: s.pickupCreated ? s.pickupCreated.pickupNumber : '', pickupCreatedStatus: s.pickupCreated ? (PICKUP_STATES[s.pickupCreated.status] || s.pickupCreated.status) : '',
+      pickupCreatedCode: s.pickupCreated ? s.pickupCreated.managementCode : '',
+      pickupCreatedGuide: s.pickupCreatedGuide, verGuiaRecogida: this.verGuiaRecogida, nuevaRecogida: this.nuevaRecogida,
+      submitPickup: this.submitPickup, pickupBusy: s.pickupBusy, pickupError: s.pickupError, pickupNotice: s.pickupNotice,
+      pickupOperator: !!s.token && /OPERADOR|ADMIN/.test(s.roles), pickupPublic: !(s.token && /OPERADOR|ADMIN/.test(s.roles)),
+      pickupLoading: s.pickupLoading, pickupFilter: s.pickupFilter, buscarPickup: this.buscarPickup, filtrarPickups: this.filtrarPickups, actualizarPickups: this.actualizarPickups,
+      pickupRows: s.pickupList.map(p => ({ label: p.pickupNumber + ' · ' + (PICKUP_STATES[p.status] || p.status) + ' · ' + (p.cityName || '') + ' · ' + p.scheduledDate + ' ' + p.timeSlot, open: () => this.consultarPickup(p.pickupNumber) })),
+      pickupDetail: !!s.pickupDetail, refrescarPickup: this.refrescarPickup,
+      pdNumber: s.pickupDetail && s.pickupDetail.pickupNumber, pdStatus: s.pickupDetail && (PICKUP_STATES[s.pickupDetail.status] || s.pickupDetail.status),
+      pdCity: s.pickupDetail && s.pickupDetail.cityName, pdDate: s.pickupDetail && s.pickupDetail.scheduledDate, pdSlot: s.pickupDetail && s.pickupDetail.timeSlot,
+      pdSize: s.pickupDetail && ({ SMALL: 'Pequeño', MEDIUM: 'Mediano', LARGE: 'Grande' }[s.pickupDetail.packageSize] || s.pickupDetail.packageSize), pdWeight: s.pickupDetail && s.pickupDetail.weightKg,
+      pdAssignee: (s.pickupDetail && s.pickupDetail.assignedUsername) || 'Sin asignar', pdAssigneeValue: (s.pickupDetail && s.pickupDetail.assignedUsername) || '', pdGuide: (s.pickupDetail && s.pickupDetail.shipmentTrackingNumber) || 'Sin vincular',
+      pdRestricted: !!(s.pickupDetail && s.pickupDetail.accessRestricted), pdVisible: !!(s.pickupDetail && !s.pickupDetail.accessRestricted),
+      pdAddress: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.address : '', pdContact: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.contactName : '', pdPhone: s.pickupDetail && !s.pickupDetail.accessRestricted ? s.pickupDetail.contactPhone : '',
+      pdCanSchedule: !!(s.pickupDetail && ['REQUESTED', 'SCHEDULED'].includes(s.pickupDetail.status)), pdCanDispatch: !!(s.pickupDetail && s.pickupDetail.status === 'SCHEDULED'), pdCanComplete: !!(s.pickupDetail && s.pickupDetail.status === 'ON_THE_WAY'),
+      pdCanLink: !!(s.pickupDetail && s.pickupDetail.status !== 'CANCELLED' && !s.pickupDetail.shipmentTrackingNumber),
+      pdAwaitingGuide: !!(s.pickupDetail && s.pickupDetail.status === 'PICKED_UP' && !s.pickupDetail.shipmentTrackingNumber),
+      pdHistory: ((s.pickupDetail && s.pickupDetail.history) || []).map(e => ({ label: [this.fmt(e.occurredAt), PICKUP_EVENTS[e.type] || e.type, e.actor, s.pickupDetail.accessRestricted && e.type === 'CANCELLED' ? '' : e.detail].filter(Boolean).join(' · ') })),
+      pickupAssignees: s.pickupAssignees.map(value => ({ value })), programarPickup: this.programarPickup, cancelarPickup: this.cancelarPickup, despacharPickup: this.despacharPickup, completarPickup: this.completarPickup, vincularPickup: this.vincularPickup,
       base: this.base,
       isHome: s.route === 'home', notHome: s.route !== 'home',
       isInterior: s.route !== 'home' && s.route !== 'login',
@@ -2233,13 +2827,19 @@ class Component extends DCLogic {
       t_origen: t ? (t.originCity || '—') : '',
       t_remitente: t ? (t.senderName || '') : '',
       t_destinatario: t ? (t.recipientName || '') : '',
+      t_restricted: !!(t && t.restricted),
       t_ubicLabel: t && t.status === 'DELIVERED' ? 'Entregado en' : 'Última ubicación',
-      t_ultimoPunto: t ? (t.status === 'DELIVERED' ? (t.recipientAddress || t.lastMovementPoint || '—') : (t.lastMovementPoint || 'Sin movimientos reportados')) : '',
-      t_ubicSub: t && t.status === 'DELIVERED' ? this.ciudadCorta(t.destinationCity) : '',
+      t_ultimoPunto: t ? (t.status === 'DELIVERED' ? (t.recipientAddress || this.ciudadCorta(t.destinationCity) || '—') : (t.lastMovementPoint || 'Sin movimientos reportados')) : '',
+      t_ubicSub: t && t.status === 'DELIVERED' && t.recipientAddress ? this.ciudadCorta(t.destinationCity) : '',
       t_ultimoMov: t && t.lastMovementAt ? this.fmt(t.lastMovementAt) : 'Registrado, sin pasos por centro',
-      pasos, frase: t ? paso[2] : '', fraseSub: t ? paso[3] : '',
+      pasos, pasosGrid: { display: 'grid', gridTemplateColumns: 'repeat(' + ORDEN.length + ',minmax(0,1fr))', margin: '24px 0 4px' }, frase: t ? paso[2] : '', fraseSub: t ? paso[3] : '',
       estadoDot: { width: '7px', height: '7px', borderRadius: '50%', background: est ? est[3] : 'transparent', flex: 'none' },
       copyTn: this.copyTn, shareLink: this.shareLink, copied: s.copied || '',
+      puedeReimprimir: !!s.token && /OPERADOR|ADMIN/.test(s.roles), reimprimirComprobante: this.reimprimirComprobante,
+      comprobante: !!comp, comp_numero: comp ? comp.numero : '', comp_barras: comp ? comp.barras : '',
+      comp_fecha: comp ? comp.fecha : '', comp_origen: comp ? comp.origen : '', comp_destino: comp ? comp.destino : '',
+      comp_destinatario: comp ? comp.destinatario : '', comp_remitente: comp ? comp.remitente : '',
+      comp_rastreo: comp ? comp.rastreo : '',
       onEvTn: this.onEvTn, onTipo: this.onTipo, onCentroSel: this.onCentroSel,
       acciones: accs.map(a => ({ tipo: a.type, etiqueta: a.label || TIPOS[a.type] || a.type })),
       tipoSel: s.tipoSel || '', sinAcciones: accs.length === 0,
@@ -2364,6 +2964,7 @@ class Component extends DCLogic {
       c_procesamiento: estadoProc,
       c_nota: 'El número de guía ya es definitivo, aunque el registro siga procesándose.',
       verCreado: this.verCreado, otroEnvio: this.otroEnvio,
+      imprimirComprobante: this.imprimirComprobante, copiarNumeroCreado: this.copiarNumeroCreado,
       submitEvent: this.submitEvent, evSubmitting: s.evSubmitting,
       evSubmitLabel: s.evSubmitting ? 'Enviando…' : 'Registrar evento',
       evError: s.evError, evErrorTitle: s.evErrorTitle, evOk: !!s.evOk, evOkTn: s.evOk || '',
