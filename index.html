@@ -256,6 +256,9 @@ a:hover { color: #f4711a; }
       </div>
       </sc-if>
       <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ goUsuarios }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff" style-hover="background:rgba(255,255,255,.12)">Usuarios</button>
+      </sc-if>
+      <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
         <button onClick="{{ goAdmin }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff" style-hover="background:rgba(255,255,255,.12)">Admin</button>
       </sc-if>
     </nav>
@@ -1419,6 +1422,154 @@ a:hover { color: #f4711a; }
       </section>
     </sc-if>
 
+    <!-- ══ USUARIOS, ROLES Y PERMISOS (HU-11) ══ -->
+    <sc-if value="{{ isUsuarios }}" hint-placeholder-val="{{ false }}">
+      <section style="max-width:960px">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#1b4b8f;margin-bottom:6px">Administración</div>
+        <h1 style="margin:0 0 6px">Usuarios y permisos</h1>
+        <p style="color:rgba(29,31,32,.65);margin-bottom:22px">Crea cuentas, cambia roles y desactiva a quien ya no debe entrar. Quitar permisos cierra sus sesiones en el acto.</p>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+          <button onClick="{{ usuAbrirNuevo }}" class="btn btn-primary" disabled="{{ usuOcupado }}" style="min-height:42px;padding:0 20px;text-transform:uppercase;letter-spacing:.06em;background:#f4711a;border-color:#f4711a;color:#fff" style-hover="background:#d9600f;border-color:#d9600f">Nuevo usuario</button>
+          <button onClick="{{ usuActualizar }}" class="btn" disabled="{{ usuLoading }}" style="min-height:42px;padding:0 20px">{{ usuBotonActualizar }}</button>
+          <button onClick="{{ usuVerAuditoria }}" class="btn" style="min-height:42px;padding:0 20px">{{ usuBotonAuditoria }}</button>
+        </div>
+
+        <sc-if value="{{ usuAviso }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:12px 16px;margin-bottom:18px;border:1px solid #1b7f4b;background:#e8f6ee;font-size:14px;color:#145c36">{{ usuAviso }}</div>
+        </sc-if>
+        <sc-if value="{{ usuError }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:14px 16px;margin-bottom:18px;border:1px solid #f4711a;background:#fdeee1">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a3606;margin-bottom:4px">{{ usuErrorTitle }}</div>
+            <p style="margin:0;font-size:14px;color:#7a3606">{{ usuError }}</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ usuNuevoAbierto }}" hint-placeholder-val="{{ false }}">
+          <form onSubmit="{{ crearUsuario }}" ref="{{ usuNuevoRef }}" noValidate="{{ true }}" class="blueprint" style="padding:22px;margin-bottom:22px">
+            <h3 style="margin:0 0 16px">Nuevo usuario</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+              <div class="field">
+                <label style="font-size:13px">Usuario</label>
+                <input class="input" name="username" placeholder="nombre.apellido" autoComplete="off">
+              </div>
+              <div class="field">
+                <label style="font-size:13px">Contrase&#241;a inicial</label>
+                <input class="input" name="clave" type="password" placeholder="Al menos 10 caracteres" autoComplete="new-password">
+              </div>
+              <div class="field">
+                <label style="font-size:13px">Correo (opcional)</label>
+                <input class="input" name="email" type="email" placeholder="persona@correo.com" autoComplete="off">
+              </div>
+            </div>
+            <fieldset style="border:0;padding:16px 0 0;margin:0">
+              <legend style="font-size:13px;padding:0;color:rgba(29,31,32,.75)">Roles</legend>
+              <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
+                <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input type="checkbox" name="roles" value="OPERADOR">Operador</label>
+                <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input type="checkbox" name="roles" value="SUPERVISOR">Supervisor</label>
+                <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input type="checkbox" name="roles" value="ADMIN">Administrador</label>
+              </div>
+              <p class="tf-muted-note" style="margin:10px 0 0">El operador registra env&#237;os y eventos. El supervisor consulta reportes. El administrador puede todo y gestiona usuarios.</p>
+            </fieldset>
+            <div style="display:flex;gap:8px;margin-top:18px">
+              <button type="submit" class="btn btn-primary" disabled="{{ usuOcupado }}" style="background:#f4711a;border-color:#f4711a;color:#fff">Crear</button>
+              <button type="button" onClick="{{ usuCerrarNuevo }}" class="btn">Cancelar</button>
+            </div>
+          </form>
+        </sc-if>
+
+        <sc-if value="{{ usuHayLista }}" hint-placeholder-val="{{ true }}">
+          <div class="blueprint" style="padding:0;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:14px">
+              <thead>
+                <tr style="background:#eef2f7;text-align:left">
+                  <th style="padding:12px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Usuario</th>
+                  <th style="padding:12px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Roles</th>
+                  <th style="padding:12px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Correo</th>
+                  <th style="padding:12px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Estado</th>
+                  <th style="padding:12px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ usuFilas }}" as="u" hint-placeholder-count="3">
+                  <tr style="border-top:1px solid rgba(29,31,32,.12)">
+                    <td style="padding:12px 14px;font-family:var(--font-heading)">{{ u.username }}</td>
+                    <td style="padding:12px 14px">{{ u.rolesTexto }}</td>
+                    <td style="padding:12px 14px;color:rgba(29,31,32,.7)">{{ u.correo }}</td>
+                    <td style="padding:12px 14px">{{ u.estado }}</td>
+                    <td style="padding:10px 14px">
+                      <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button onClick="{{ u.editar }}" class="btn" style="min-height:34px;padding:0 12px;font-size:13px">Editar</button>
+                        <button onClick="{{ u.alternar }}" class="btn" disabled="{{ usuOcupado }}" style="min-height:34px;padding:0 12px;font-size:13px">{{ u.botonActivo }}</button>
+                        <sc-if value="{{ u.bloqueado }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ u.desbloquear }}" class="btn" disabled="{{ usuOcupado }}" style="min-height:34px;padding:0 12px;font-size:13px">Desbloquear</button>
+                        </sc-if>
+                      </div>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ usuSel }}" hint-placeholder-val="{{ false }}">
+          <form onSubmit="{{ guardarCambios }}" ref="{{ usuEditarRef }}" noValidate="{{ true }}" class="blueprint" style="padding:22px;margin-top:22px">
+            <h3 style="margin:0 0 4px">Editar {{ usuSel }}</h3>
+            <p class="tf-muted-note" style="margin:0 0 16px">Cambiar los roles cierra sus sesiones abiertas: el token que tenga seguir&#237;a llevando los permisos anteriores.</p>
+            <fieldset style="border:0;padding:0;margin:0">
+              <legend style="font-size:13px;padding:0;color:rgba(29,31,32,.75)">Roles</legend>
+              <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
+                <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input type="checkbox" name="roles" value="OPERADOR" defaultChecked="{{ usuSelOperador }}">Operador</label>
+                <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input type="checkbox" name="roles" value="SUPERVISOR" defaultChecked="{{ usuSelSupervisor }}">Supervisor</label>
+                <label style="display:flex;align-items:center;gap:7px;font-size:14px"><input type="checkbox" name="roles" value="ADMIN" defaultChecked="{{ usuSelAdmin }}">Administrador</label>
+              </div>
+            </fieldset>
+            <div class="field" style="max-width:320px;margin-top:16px">
+              <label style="font-size:13px">Correo</label>
+              <input class="input" name="email" type="email" defaultValue="{{ usuSelCorreo }}" placeholder="persona@correo.com" autoComplete="off">
+            </div>
+            <p class="tf-muted-note" style="margin:8px 0 0">Sin correo, esa persona no podr&#225; recuperar su contrase&#241;a y depender&#225; de que t&#250; se la cambies.</p>
+            <div style="display:flex;gap:8px;margin-top:18px">
+              <button type="submit" class="btn btn-primary" disabled="{{ usuOcupado }}" style="background:#f4711a;border-color:#f4711a;color:#fff">Guardar</button>
+              <button type="button" onClick="{{ usuCancelarEdicion }}" class="btn">Cancelar</button>
+            </div>
+          </form>
+        </sc-if>
+
+        <sc-if value="{{ usuAuditoriaAbierta }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:26px">
+            <h3 style="margin:0 0 4px">Registro de cambios</h3>
+            <p class="tf-muted-note" style="margin:0 0 14px">Qui&#233;n cambi&#243; qu&#233; y cu&#225;ndo. No se puede editar ni borrar.</p>
+            <div class="blueprint" style="padding:0;overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                  <tr style="background:#eef2f7;text-align:left">
+                    <th style="padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Cu&#225;ndo</th>
+                    <th style="padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Qui&#233;n</th>
+                    <th style="padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Qu&#233;</th>
+                    <th style="padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Sobre</th>
+                    <th style="padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(29,31,32,.6)">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ usuAuditoriaFilas }}" as="a" hint-placeholder-count="3">
+                    <tr style="border-top:1px solid rgba(29,31,32,.12)">
+                      <td style="padding:10px 14px;white-space:nowrap;color:rgba(29,31,32,.7)">{{ a.cuando }}</td>
+                      <td style="padding:10px 14px">{{ a.actor }}</td>
+                      <td style="padding:10px 14px">{{ a.accion }}</td>
+                      <td style="padding:10px 14px">{{ a.objetivo }}</td>
+                      <td style="padding:10px 14px;color:rgba(29,31,32,.7)">{{ a.detalle }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <!-- ══ ADMIN ══ -->
     <sc-if value="{{ isAdminScreen }}" hint-placeholder-val="{{ false }}">
       <section style="max-width:640px">
@@ -1586,6 +1737,15 @@ function urlRastreoPublica() {
 }
 
 // Única fuente de lo que se imprime: copia solo los campos permitidos y fija la zona horaria.
+const NOMBRE_DE_ROL = { OPERADOR: 'Operador', SUPERVISOR: 'Supervisor', ADMIN: 'Administrador' };
+const NOMBRE_DE_ACCION = {
+  USUARIO_CREADO: 'Usuario creado', ROL_CAMBIADO: 'Rol cambiado',
+  USUARIO_ACTIVADO: 'Usuario activado', USUARIO_DESACTIVADO: 'Usuario desactivado',
+  CUENTA_BLOQUEADA: 'Cuenta bloqueada', CUENTA_DESBLOQUEADA: 'Cuenta desbloqueada',
+  CLAVE_CAMBIADA: 'Contrase\u00f1a cambiada', EMAIL_CAMBIADO: 'Correo cambiado',
+  DATOS_COMPLETOS_CONSULTADOS: 'Datos completos consultados'
+};
+
 function vistaComprobante(receipt, urlPublica) {
   const r = receipt || {};
   const numero = r.trackingNumber || '';
@@ -1653,6 +1813,8 @@ class Component extends DCLogic {
     this.evFormRef = React.createRef();
     this.loginFormRef = React.createRef();
     this.pickupCodeRef = React.createRef();
+    this.usuNuevoRef = React.createRef();
+    this.usuEditarRef = React.createRef();
     this.state = {
       route: 'home', q: '', qError: '', opsOpen: false,
       loading: false, notFound: false, netError: '', tracking: null,
@@ -1671,7 +1833,9 @@ class Component extends DCLogic {
       tieDesde: '', tieHasta: '', tiePreset: '', tieLoading: false, tieData: null, tieError: '', tieErrorTitle: '',
       pickupCityText: '', pickupCityId: null, pickupCities: [], pickupOpen: false, pickupHours: null,
       pickupCreated: null, pickupCreatedGuide: '', pickupError: '', pickupNotice: '', pickupBusy: false,
-      pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: [], pickupCode: ''
+      pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: [], pickupCode: '',
+      usuarios: null, usuLoading: false, usuError: '', usuErrorTitle: '', usuAviso: '',
+      usuSel: null, usuNuevoAbierto: false, usuOcupado: false, usuAuditoria: null, usuAuditoriaAbierta: false
     };
   }
 
@@ -1827,6 +1991,128 @@ class Component extends DCLogic {
   };
   goLogin = () => this.setState({ route: 'login', loginError: '' });
   goAdmin = () => this.setState({ route: this.state.token ? 'admin' : 'login' });
+
+  // ── Usuarios, roles y permisos (HU-11) ──
+  // Todo cuelga de /api/admin, que la API reserva al administrador: un supervisor que
+  // escriba la direccion a mano recibe 403 y no ve ningun dato.
+  /** Roles del usuario que se esta editando, o cadena vacia si no hay ninguno. */
+  rolesDe(s) {
+    const u = (s.usuarios || []).find(x => x.username === s.usuSel);
+    return (u && u.roles) || '';
+  }
+
+  correoDe(s) {
+    const u = (s.usuarios || []).find(x => x.username === s.usuSel);
+    return (u && u.email) || '';
+  }
+
+  goUsuarios = () => this.setState(
+      { route: this.state.token ? 'usuarios' : 'login', usuSel: null, usuAviso: '', usuError: '' },
+      () => { if (this.state.token) this.cargarUsuarios(); });
+
+  cargarUsuarios = async () => {
+    this.setState({ usuLoading: true, usuError: '' });
+    try {
+      const r = await this.api('/api/admin/usuarios', { timeout: 45000 });
+      if (!r.ok) return this.setState({ usuLoading: false, usuErrorTitle: 'Error ' + r.status,
+          usuError: (r.data && r.data.detail) || 'No se pudo consultar la lista de usuarios.' });
+      this.setState({ usuLoading: false, usuarios: Array.isArray(r.data) ? r.data : [] });
+    } catch (err) {
+      this.setState({ usuLoading: false, usuErrorTitle: 'Sin conexión', usuError: 'No hay conexión con la API (' + err.message + ').' });
+    }
+  };
+
+  cargarAuditoria = async () => {
+    if (this.state.usuAuditoriaAbierta) return this.setState({ usuAuditoriaAbierta: false });
+    this.setState({ usuAuditoriaAbierta: true });
+    try {
+      const r = await this.api('/api/admin/usuarios/auditoria?cuantos=40', { timeout: 45000 });
+      if (r.ok) this.setState({ usuAuditoria: Array.isArray(r.data) ? r.data : [] });
+    } catch (err) { /* el panel queda vacio; el error de la lista ya se muestra arriba */ }
+  };
+
+  crearUsuario = async (e) => {
+    e.preventDefault();
+    const f = new FormData(this.usuNuevoRef.current);
+    const username = (f.get('username') || '').toString().trim();
+    const clave = (f.get('clave') || '').toString();
+    const roles = f.getAll('roles').join(' ');
+    const email = (f.get('email') || '').toString().trim();
+    if (!username) return this.setState({ usuErrorTitle: 'Falta el usuario', usuError: 'Escribe el nombre de usuario.' });
+    if (!roles) return this.setState({ usuErrorTitle: 'Falta el rol', usuError: 'Marca al menos un rol.' });
+    // La API exige 10 caracteres; avisarlo aqui ahorra el viaje.
+    if (clave.length < 10) return this.setState({ usuErrorTitle: 'Contraseña muy corta', usuError: 'Debe tener al menos 10 caracteres.' });
+
+    this.setState({ usuOcupado: true, usuError: '' });
+    const r = await this.enviar('/api/admin/usuarios', 'POST',
+        { username, clave, roles, email: email || null }, 'Usuario ' + username + ' creado');
+    if (r) this.setState({ usuNuevoAbierto: false });
+  };
+
+  guardarCambios = async (e) => {
+    e.preventDefault();
+    const usuario = this.state.usuSel;
+    if (!usuario) return;
+    const f = new FormData(this.usuEditarRef.current);
+    const roles = f.getAll('roles').join(' ');
+    const email = (f.get('email') || '').toString().trim();
+    const actual = (this.state.usuarios || []).find(u => u.username === usuario);
+    if (!roles) return this.setState({ usuErrorTitle: 'Falta el rol', usuError: 'Cada usuario debe conservar al menos un rol.' });
+
+    this.setState({ usuOcupado: true, usuError: '' });
+    // Solo se envia lo que cambio: cada llamada deja su huella en la auditoria.
+    if (actual && roles !== actual.roles) {
+      const r = await this.enviar('/api/admin/usuarios/' + usuario + '/roles', 'PUT', { roles },
+          'Roles de ' + usuario + ' actualizados. Sus sesiones quedaron cerradas.');
+      if (!r) return;
+    }
+    if (actual && (email || '') !== (actual.email || '')) {
+      const r = await this.enviar('/api/admin/usuarios/' + usuario + '/email', 'PUT', { email: email || null },
+          'Correo de ' + usuario + ' actualizado');
+      if (!r) return;
+    }
+    this.setState({ usuSel: null });
+  };
+
+  alternarActivo = async (usuario, activo) => {
+    const texto = activo
+        ? 'Reactivar a ' + usuario + '. Podrá volver a entrar.'
+        : 'Desactivar a ' + usuario + '. Sus sesiones abiertas se cerrarán de inmediato.';
+    if (!window.confirm(texto)) return;
+    this.setState({ usuOcupado: true, usuError: '' });
+    await this.enviar('/api/admin/usuarios/' + usuario + '/activo?valor=' + activo, 'PUT', null,
+        activo ? usuario + ' quedó activo' : usuario + ' quedó desactivado y sus sesiones cerradas');
+  };
+
+  desbloquearUsuario = async (usuario) => {
+    this.setState({ usuOcupado: true, usuError: '' });
+    await this.enviar('/api/admin/usuarios/' + usuario + '/desbloquear', 'POST', null,
+        'Cuenta de ' + usuario + ' desbloqueada');
+  };
+
+  /** Envia, refresca la lista y traduce el error. Devuelve true si salio bien. */
+  enviar = async (ruta, metodo, cuerpo, aviso) => {
+    try {
+      const r = await this.api(ruta, { method: metodo, body: cuerpo || undefined, timeout: 45000 });
+      if (!r.ok) {
+        this.setState({ usuOcupado: false, usuErrorTitle: this.tituloDeError(r.status),
+            usuError: (r.data && (r.data.detail || r.data.message)) || 'La operación no se completó.' });
+        return false;
+      }
+      this.setState({ usuOcupado: false, usuAviso: aviso, usuError: '' }, () => this.cargarUsuarios());
+      return true;
+    } catch (err) {
+      this.setState({ usuOcupado: false, usuErrorTitle: 'Sin conexión', usuError: 'No hay conexión con la API (' + err.message + ').' });
+      return false;
+    }
+  };
+
+  tituloDeError(status) {
+    if (status === 409) return 'No se puede';
+    if (status === 403) return 'Sin permiso';
+    if (status === 404) return 'No existe';
+    return 'Error ' + status;
+  }
   goReporte = () => {
     if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
     this.setState({ route: 'reporte', opsOpen: false });
@@ -2974,6 +3260,47 @@ class Component extends DCLogic {
       submitLogin: this.submitLogin, loginSubmitting: s.loginSubmitting,
       loginLabel: s.loginSubmitting ? 'Ingresando…' : 'Ingresar',
       loginError: s.loginError, loginErrorTitle: s.loginErrorTitle,
+      // ── Usuarios, roles y permisos (HU-11) ──
+      isUsuarios: s.route === 'usuarios',
+      goUsuarios: this.goUsuarios,
+      usuLoading: s.usuLoading, usuOcupado: s.usuOcupado,
+      usuBotonActualizar: s.usuLoading ? 'Actualizando\u2026' : 'Actualizar',
+      usuActualizar: () => this.cargarUsuarios(),
+      usuError: s.usuError, usuErrorTitle: s.usuErrorTitle, usuAviso: s.usuAviso,
+      usuNuevoAbierto: s.usuNuevoAbierto,
+      usuAbrirNuevo: () => this.setState({ usuNuevoAbierto: true, usuSel: null, usuAviso: '', usuError: '' }),
+      usuCerrarNuevo: () => this.setState({ usuNuevoAbierto: false, usuError: '' }),
+      crearUsuario: this.crearUsuario,
+      usuNuevoRef: this.usuNuevoRef, usuEditarRef: this.usuEditarRef,
+      guardarCambios: this.guardarCambios,
+      usuCancelarEdicion: () => this.setState({ usuSel: null, usuError: '' }),
+      usuSel: s.usuSel,
+      usuSelOperador: /(^| )OPERADOR( |$)/.test(this.rolesDe(s)),
+      usuSelSupervisor: /(^| )SUPERVISOR( |$)/.test(this.rolesDe(s)),
+      usuSelAdmin: /(^| )ADMIN( |$)/.test(this.rolesDe(s)),
+      usuSelCorreo: this.correoDe(s),
+      usuHayLista: Array.isArray(s.usuarios) && s.usuarios.length > 0,
+      usuFilas: (s.usuarios || []).map(u => ({
+        username: u.username,
+        rolesTexto: (u.roles || '').split(' ').filter(Boolean).map(r => NOMBRE_DE_ROL[r] || r).join(', '),
+        correo: u.email || 'Sin correo',
+        estado: u.bloqueado ? 'Bloqueado' : (u.activo ? 'Activo' : 'Desactivado'),
+        bloqueado: !!u.bloqueado,
+        botonActivo: u.activo ? 'Desactivar' : 'Activar',
+        editar: () => this.setState({ usuSel: u.username, usuNuevoAbierto: false, usuAviso: '', usuError: '' }),
+        alternar: () => this.alternarActivo(u.username, !u.activo),
+        desbloquear: () => this.desbloquearUsuario(u.username)
+      })),
+      usuAuditoriaAbierta: s.usuAuditoriaAbierta,
+      usuBotonAuditoria: s.usuAuditoriaAbierta ? 'Ocultar registro' : 'Ver registro de cambios',
+      usuVerAuditoria: () => this.cargarAuditoria(),
+      usuAuditoriaFilas: (s.usuAuditoria || []).map(a => ({
+        cuando: this.fmt(a.ocurridoEn),
+        actor: a.actor || '\u2014',
+        accion: NOMBRE_DE_ACCION[a.accion] || a.accion,
+        objetivo: a.objetivo || '\u2014',
+        detalle: a.detalle || '\u2014'
+      })),
       rebuild: this.rebuild, adminLoading: s.adminLoading,
       adminLabel: s.adminLoading ? 'Reconstruyendo…' : 'Reconstruir proyecciones',
       adminResult: !!s.adminResult,
