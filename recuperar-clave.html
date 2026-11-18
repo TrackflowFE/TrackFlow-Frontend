@@ -23,8 +23,11 @@
   .tf-wrap {
     position: relative;
     flex: 1;
-    display: grid;
-    place-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
     padding: 32px 16px 48px;
   }
   .tf-card {
@@ -36,8 +39,7 @@
   }
   .tf-logo {
     display: block;
-    height: 38px;
-    margin: 0 auto 26px;
+    height: 44px;
   }
   .tf-card h1 {
     margin: 0 0 8px;
@@ -92,9 +94,9 @@
 </head>
 <body>
 <div class="tf-wrap">
-  <main class="tf-card">
-    <img class="tf-logo" src="assets/images/logo-trackflow.png" alt="TrackFlow">
+  <img class="tf-logo" src="assets/images/logo-trackflow.png" alt="TrackFlow">
 
+  <main class="tf-card">
     <h1>Recuperar contraseña</h1>
     <p class="tf-intro" id="intro">
       Escribe el correo de tu cuenta. Si corresponde a una cuenta de TrackFlow, te llegará un
