@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restablecer contraseña · TrackFlow</title>
+<!-- El enlace del correo lleva el token en la dirección, así que esta página no debe
+     quedar guardada ni indexada en ninguna parte. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="vendor/design-system/styles.css">
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #0e1b2e url("assets/images/fondo-login.png") center/cover no-repeat;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8,18,34,.78) 0%, rgba(8,18,34,.88) 100%);
+  }
+  .tf-wrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 32px 16px 48px;
+  }
+  .tf-card {
+    width: 100%;
+    max-width: 480px;
+    background: #f7f7f8;
+    padding: 36px 34px;
+    box-shadow: 0 24px 60px rgba(4, 14, 32, .45);
+  }
+  .tf-logo {
+    display: block;
+    height: 44px;
+  }
+  .tf-card h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    color: #1b4b8f;
+  }
+  .tf-intro {
+    color: rgba(29, 31, 32, .65);
+    font-size: 15px;
+    margin: 0 0 24px;
+  }
+  .tf-campos {
+    display: grid;
+    gap: 18px;
+  }
+  .tf-clave-caja {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .tf-clave-caja .input {
+    min-height: 52px;
+    padding-right: 46px;
+    font-size: 15px;
+    background: #fff;
+    width: 100%;
+  }
+  .tf-ojo {
+    position: absolute;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: rgba(29, 31, 32, .5);
+  }
+  .tf-ojo:hover { color: #f4711a; }
+  .tf-reglas {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: rgba(29, 31, 32, .6);
+    line-height: 1.6;
+  }
+  .tf-enviar {
+    min-height: 54px;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: 16px;
+    background: #f4711a;
+    border-color: #f4711a;
+    color: #fff;
+  }
+  .tf-enviar:hover:not(:disabled) { background: #d9600f; border-color: #d9600f; }
+  .tf-enviar:disabled { opacity: .65; cursor: default; }
+  .tf-aviso {
+    padding: 14px 16px;
+    margin-top: 20px;
+    border: 1px solid #f4711a;
+    background: #fdeee1;
+  }
+  .tf-aviso-titulo {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #7a3606;
+    margin-bottom: 4px;
+  }
+  .tf-aviso p { margin: 0; font-size: 14px; color: #7a3606; }
+  .tf-aviso-bien { border-color: #1b7f4b; background: #e8f6ee; }
+  .tf-aviso-bien .tf-aviso-titulo, .tf-aviso-bien p { color: #145c36; }
+  .tf-pie {
+    margin: 22px 0 0;
+    font-size: 14px;
+    text-align: center;
+  }
+  .tf-pie a { color: #1b4b8f; }
+  .tf-pie a:hover { color: #f4711a; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tf-wrap">
+  <img class="tf-logo" src="assets/images/logo-trackflow.png" alt="TrackFlow">
+
+  <main class="tf-card">
+    <h1>Nueva contraseña</h1>
+    <p class="tf-intro" id="intro">Elige la contraseña con la que entrarás a TrackFlow.</p>
+
+    <form id="formulario" novalidate>
+      <div class="tf-campos">
+        <div class="field">
+          <label for="nueva" style="font-size:13px">Nueva contraseña</label>
+          <div class="tf-clave-caja">
+            <input class="input" id="nueva" name="nueva" type="password" autocomplete="new-password"
+                   placeholder="Escribe tu nueva contraseña" required>
+            <button type="button" class="tf-ojo" data-para="nueva" aria-label="Mostrar u ocultar la contraseña">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="repetida" style="font-size:13px">Repite la contraseña</label>
+          <div class="tf-clave-caja">
+            <input class="input" id="repetida" name="repetida" type="password" autocomplete="new-password"
+                   placeholder="Escríbela otra vez" required>
+            <button type="button" class="tf-ojo" data-para="repetida" aria-label="Mostrar u ocultar la contraseña">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <ul class="tf-reglas">
+          <li>Al menos 10 caracteres.</li>
+          <li>Distinta de la que tenías antes.</li>
+        </ul>
+
+        <button type="submit" class="btn tf-enviar" id="enviar">Guardar contraseña</button>
+      </div>
+    </form>
+
+    <div class="tf-aviso" id="aviso" role="alert" aria-live="polite" hidden>
+      <div class="tf-aviso-titulo" id="aviso-titulo"></div>
+      <p id="aviso-texto"></p>
+    </div>
+
+    <p class="tf-pie" id="pie" hidden><a href="index.html">Ir a la pantalla de ingreso</a></p>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Igual que index.html: en local se trabaja contra la API del propio equipo.
+  var LOCAL = ["localhost", "127.0.0.1", "[::1]"].indexOf(location.hostname) !== -1;
+  var API = (LOCAL ? "http://localhost:8080" : "https://trackflow-mxll.onrender.com").replace(/\/$/, "");
+
+  var MINIMO = 10;
+
+  var formulario = document.getElementById("formulario");
+  var nueva = document.getElementById("nueva");
+  var repetida = document.getElementById("repetida");
+  var enviar = document.getElementById("enviar");
+  var aviso = document.getElementById("aviso");
+  var avisoTitulo = document.getElementById("aviso-titulo");
+  var avisoTexto = document.getElementById("aviso-texto");
+  var pie = document.getElementById("pie");
+  var intro = document.getElementById("intro");
+
+  function mostrarAviso(titulo, texto, bien) {
+    avisoTitulo.textContent = titulo;
+    avisoTexto.textContent = texto;
+    aviso.classList.toggle("tf-aviso-bien", bien === true);
+    aviso.hidden = false;
+  }
+
+  function ocultarAviso() {
+    aviso.hidden = true;
+  }
+
+  // El token viaja en la dirección. Se lee una vez y se borra de la barra para que no
+  // quede en el historial del navegador ni se comparta al copiar la URL.
+  var token = new URLSearchParams(location.search).get("token") || "";
+  if (token) {
+    history.replaceState(null, "", location.pathname);
+  }
+
+  if (!token) {
+    formulario.hidden = true;
+    intro.hidden = true;
+    mostrarAviso("Enlace incompleto",
+        "Esta dirección no trae el código del enlace. Abre el enlace del correo tal como llegó, sin recortarlo.");
+    pie.hidden = false;
+    return;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".tf-ojo"), function (boton) {
+    boton.addEventListener("click", function () {
+      var campo = document.getElementById(boton.getAttribute("data-para"));
+      campo.type = campo.type === "password" ? "text" : "password";
+      campo.focus();
+    });
+  });
+
+  formulario.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    ocultarAviso();
+
+    // Las dos comprobaciones que se pueden hacer aquí, para no gastar el enlace en un
+    // intento que el servidor va a rechazar de todos modos.
+    if (nueva.value.length < MINIMO) {
+      mostrarAviso("Contraseña muy corta", "Debe tener al menos " + MINIMO + " caracteres.");
+      nueva.focus();
+      return;
+    }
+    if (nueva.value !== repetida.value) {
+      mostrarAviso("No coinciden", "Las dos contraseñas que escribiste son distintas.");
+      repetida.focus();
+      return;
+    }
+
+    enviar.disabled = true;
+    enviar.textContent = "Guardando...";
+    guardar(nueva.value);
+  });
+
+  function guardar(clave) {
+    fetch(API + "/api/auth/clave/restablecer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token, nueva: clave })
+    }).then(function (respuesta) {
+      if (respuesta.status === 204) {
+        terminar();
+        return null;
+      }
+      // La API responde con ProblemDetail: el campo 'detail' ya trae el motivo exacto,
+      // incluido cuál regla no se cumplió.
+      return respuesta.json().catch(function () { return null; }).then(function (cuerpo) {
+        rehabilitar();
+        mostrarAviso("No se pudo cambiar",
+            (cuerpo && (cuerpo.detail || cuerpo.message)) || "El servidor rechazó el cambio.");
+      });
+    }).catch(function (error) {
+      rehabilitar();
+      mostrarAviso("Sin conexión", "No hay conexión con " + API + " (" + error.message + ").");
+    });
+  }
+
+  function terminar() {
+    formulario.hidden = true;
+    intro.hidden = true;
+    mostrarAviso("Listo", "Tu contraseña quedó cambiada. Ya puedes entrar con ella.", true);
+    pie.hidden = false;
+  }
+
+  function rehabilitar() {
+    enviar.disabled = false;
+    enviar.textContent = "Guardar contraseña";
+  }
+})();
+</script>
+</body>
+</html>

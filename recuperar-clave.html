@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recuperar contraseña · TrackFlow</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="vendor/design-system/styles.css">
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #0e1b2e url("assets/images/fondo-login.png") center/cover no-repeat;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8,18,34,.78) 0%, rgba(8,18,34,.88) 100%);
+  }
+  .tf-wrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 32px 16px 48px;
+  }
+  .tf-card {
+    width: 100%;
+    max-width: 480px;
+    background: #f7f7f8;
+    padding: 36px 34px;
+    box-shadow: 0 24px 60px rgba(4, 14, 32, .45);
+  }
+  .tf-logo {
+    display: block;
+    height: 44px;
+  }
+  .tf-card h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    color: #1b4b8f;
+  }
+  .tf-intro {
+    color: rgba(29, 31, 32, .65);
+    font-size: 15px;
+    margin: 0 0 24px;
+  }
+  .tf-campos { display: grid; gap: 18px; }
+  .tf-campos .input {
+    min-height: 52px;
+    font-size: 15px;
+    background: #fff;
+    width: 100%;
+  }
+  .tf-enviar {
+    min-height: 54px;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: 16px;
+    background: #f4711a;
+    border-color: #f4711a;
+    color: #fff;
+  }
+  .tf-enviar:hover:not(:disabled) { background: #d9600f; border-color: #d9600f; }
+  .tf-enviar:disabled { opacity: .65; cursor: default; }
+  .tf-aviso {
+    padding: 14px 16px;
+    margin-top: 20px;
+    border: 1px solid #f4711a;
+    background: #fdeee1;
+  }
+  .tf-aviso-titulo {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #7a3606;
+    margin-bottom: 4px;
+  }
+  .tf-aviso p { margin: 0; font-size: 14px; color: #7a3606; }
+  .tf-aviso-bien { border-color: #1b4b8f; background: #eaf1fa; }
+  .tf-aviso-bien .tf-aviso-titulo, .tf-aviso-bien p { color: #16396b; }
+  .tf-pie { margin: 22px 0 0; font-size: 14px; text-align: center; }
+  .tf-pie a { color: #1b4b8f; }
+  .tf-pie a:hover { color: #f4711a; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tf-wrap">
+  <img class="tf-logo" src="assets/images/logo-trackflow.png" alt="TrackFlow">
+
+  <main class="tf-card">
+    <h1>Recuperar contraseña</h1>
+    <p class="tf-intro" id="intro">
+      Escribe el correo de tu cuenta. Si corresponde a una cuenta de TrackFlow, te llegará un
+      enlace para elegir una contraseña nueva.
+    </p>
+
+    <form id="formulario" novalidate>
+      <div class="tf-campos">
+        <div class="field">
+          <label for="email" style="font-size:13px">Correo</label>
+          <input class="input" id="email" name="email" type="email" autocomplete="email"
+                 placeholder="tucorreo@ejemplo.com" required>
+        </div>
+        <button type="submit" class="btn tf-enviar" id="enviar">Enviarme el enlace</button>
+      </div>
+    </form>
+
+    <div class="tf-aviso" id="aviso" role="alert" aria-live="polite" hidden>
+      <div class="tf-aviso-titulo" id="aviso-titulo"></div>
+      <p id="aviso-texto"></p>
+    </div>
+
+    <p class="tf-pie"><a href="index.html">Volver al ingreso</a></p>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LOCAL = ["localhost", "127.0.0.1", "[::1]"].indexOf(location.hostname) !== -1;
+  var API = (LOCAL ? "http://localhost:8080" : "https://trackflow-mxll.onrender.com").replace(/\/$/, "");
+
+  var formulario = document.getElementById("formulario");
+  var email = document.getElementById("email");
+  var enviar = document.getElementById("enviar");
+  var aviso = document.getElementById("aviso");
+  var avisoTitulo = document.getElementById("aviso-titulo");
+  var avisoTexto = document.getElementById("aviso-texto");
+
+  function mostrarAviso(titulo, texto, bien) {
+    avisoTitulo.textContent = titulo;
+    avisoTexto.textContent = texto;
+    aviso.classList.toggle("tf-aviso-bien", bien === true);
+    aviso.hidden = false;
+  }
+
+  formulario.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    aviso.hidden = true;
+
+    if (!email.value.trim()) {
+      mostrarAviso("Falta el correo", "Escribe el correo de tu cuenta.");
+      email.focus();
+      return;
+    }
+
+    enviar.disabled = true;
+    enviar.textContent = "Enviando...";
+
+    fetch(API + "/api/auth/clave/recuperar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.value.trim() })
+    }).then(function (respuesta) {
+      return respuesta.json().catch(function () { return null; }).then(function (cuerpo) {
+        if (respuesta.ok) {
+          // La API responde lo mismo exista o no la cuenta, y esta página no añade
+          // nada: decir "ese correo no está registrado" revelaría quién tiene cuenta.
+          formulario.hidden = true;
+          document.getElementById("intro").hidden = true;
+          mostrarAviso("Solicitud recibida",
+              (cuerpo && cuerpo.mensaje)
+                  || "Si el correo corresponde a una cuenta, te enviamos un enlace. Revisa tu bandeja; el enlace vence en 30 minutos.",
+              true);
+          return;
+        }
+        rehabilitar();
+        mostrarAviso("No se pudo enviar",
+            (cuerpo && (cuerpo.detail || cuerpo.message)) || "El servidor rechazó la solicitud.");
+      });
+    }).catch(function (error) {
+      rehabilitar();
+      mostrarAviso("Sin conexión", "No hay conexión con " + API + " (" + error.message + ").");
+    });
+  });
+
+  function rehabilitar() {
+    enviar.disabled = false;
+    enviar.textContent = "Enviarme el enlace";
+  }
+})();
+</script>
+</body>
+</html>
