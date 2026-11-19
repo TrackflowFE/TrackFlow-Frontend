@@ -191,7 +191,32 @@
 
   // Igual que index.html: en local se trabaja contra la API del propio equipo.
   var LOCAL = ["localhost", "127.0.0.1", "[::1]"].indexOf(location.hostname) !== -1;
-  var API = (LOCAL ? "http://localhost:8080" : "https://trackflow-mxll.onrender.com").replace(/\/$/, "");
+  var API = (LOCAL ? "http://localhost:8080" : "https://trackflow-envios-api.onrender.com").replace(/\/$/, "");
+
+  // El servicio gratuito se duerme y tarda cerca de un minuto en despertar, asi que la
+  // espera es generosa; pero tiene que existir: sin limite, una API que no responde deja
+  // la pagina diciendo "enviando" para siempre, sin explicar nada a quien espera.
+  var ESPERA_MAXIMA_MS = 90000;
+
+  function pedir(ruta, cuerpo) {
+    var control = new AbortController();
+    var reloj = setTimeout(function () { control.abort(); }, ESPERA_MAXIMA_MS);
+    return fetch(API + ruta, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpo),
+      signal: control.signal
+    }).then(function (respuesta) {
+      clearTimeout(reloj);
+      return respuesta;
+    }).catch(function (error) {
+      clearTimeout(reloj);
+      throw error.name === "AbortError"
+          ? new Error("el servicio no respondio en " + Math.round(ESPERA_MAXIMA_MS / 1000) + "s")
+          : error;
+    });
+  }
+
 
   var MINIMO = 10;
 
@@ -263,11 +288,7 @@
   });
 
   function guardar(clave) {
-    fetch(API + "/api/auth/clave/restablecer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: token, nueva: clave })
-    }).then(function (respuesta) {
+    pedir("/api/auth/clave/restablecer", { token: token, nueva: clave }).then(function (respuesta) {
       if (respuesta.status === 204) {
         terminar();
         return null;
