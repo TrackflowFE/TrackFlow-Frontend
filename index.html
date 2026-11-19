@@ -1432,7 +1432,7 @@ a:hover { color: #f4711a; }
         <h1 style="margin:0 0 8px">Radicar una PQR</h1>
         <p>Cuéntanos tu petición, queja o reclamo. Te daremos un número de radicado y te lo enviaremos por correo para que puedas consultar el estado.</p>
         <sc-if value="{{ pqrCreated }}" hint-placeholder-val="{{ false }}">
-          <div class="tf-status-success" role="status"><div><strong>Radicado: {{ pqrRadicado }}</strong><div>Estado: {{ pqrCreatedEstado }}.</div><p>{{ pqrCreatedMensaje }}</p><p>Guarda este número: lo necesitas, junto con tu correo, para consultar el estado.</p></div></div>
+          <div class="tf-status-success" role="status"><div><strong>Radicado: {{ pqrRadicado }}</strong><div>Estado: {{ pqrCreatedEstado }}.</div><p>{{ pqrCreatedMensaje }}</p></div></div>
           <button class="btn" onClick="{{ otraPqr }}" style="margin-top:14px">Radicar otra PQR</button>
         </sc-if>
         <sc-if value="{{ pqrMostrarForm }}" hint-placeholder-val="{{ true }}">
