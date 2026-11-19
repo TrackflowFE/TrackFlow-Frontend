@@ -1611,7 +1611,7 @@ a:hover { color: #f4711a; }
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-mxll.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;},&quot;reportsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-reports-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 2: Reportes&quot;},&quot;shipmentsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-envios-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 1: Envíos&quot;},&quot;logisticsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-logistics.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 3: Logística&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;apiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-envios-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API&quot;},&quot;reportsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-reports-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 2: Reportes&quot;},&quot;shipmentsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-envios-api.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 1: Envíos&quot;},&quot;logisticsApiBaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://trackflow-logistics.onrender.com&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API 3: Logística&quot;}}">
 const ESTADOS = {
   REGISTERED: ['Registrado', '#e7e7ea', '#424244', 'rgba(29,31,32,.3)'],
   IN_CUSTODY: ['En custodia', '#e9f0fa', '#0e2646', '#1b4b8f'],
@@ -1889,14 +1889,14 @@ class Component extends DCLogic {
       pickupCreated: null, pickupCreatedGuide: '', pickupCode: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
   }
 
-  get base() { return (this.props.apiBaseUrl || 'https://trackflow-mxll.onrender.com').replace(/\/$/, ''); }
+  get base() { return (this.props.apiBaseUrl || 'https://trackflow-envios-api.onrender.com').replace(/\/$/, ''); }
 
   // A qué API pertenece cada ruta: reports (API 2), logistics (API 3), shipments (API 1) o ninguna.
   destinoDe(path) {
     if (/^\/api\/(tracking|reports)(\/|\?|$)/.test(path)) return 'reports';
     if (/^\/api\/centers(\/|\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/(events|route|actions)(\/|\?|$)/.test(path)) return 'logistics';
-    if (/^\/api\/(auth|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)
+    if (/^\/api\/(auth|admin|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/receipt(\?|$)/.test(path)) return 'shipments';
     return null;
   }
