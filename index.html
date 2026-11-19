@@ -1512,6 +1512,44 @@ a:hover { color: #f4711a; }
       </section>
     </sc-if>
 
+    <!-- ══ CAMBIO OBLIGATORIO DE LA CLAVE TEMPORAL ══ -->
+    <sc-if value="{{ isCambioObligatorio }}" hint-placeholder-val="{{ false }}">
+      <section style="max-width:520px;margin:0 auto">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#1b4b8f;margin-bottom:6px">Primer ingreso</div>
+        <h1 style="margin:0 0 6px">Elige tu contraseña</h1>
+        <p style="color:rgba(29,31,32,.65);margin-bottom:24px">Entraste con una contraseña temporal que te dieron al crear la cuenta. Elige una propia para continuar: hasta entonces, la sesión no sirve para nada más.</p>
+
+        <form onSubmit="{{ cambiarClaveObligatoria }}" ref="{{ obligRef }}" noValidate="{{ true }}" class="blueprint" style="padding:24px 22px">
+          <div style="display:grid;gap:18px">
+            <div class="field">
+              <label style="font-size:13px">Contraseña temporal</label>
+              <input class="input" name="actual" type="password" autoComplete="current-password" placeholder="La que te dieron" style="min-height:50px">
+            </div>
+            <div class="field">
+              <label style="font-size:13px">Nueva contraseña</label>
+              <input class="input" name="nueva" type="password" autoComplete="new-password" placeholder="Al menos 10 caracteres" style="min-height:50px">
+            </div>
+            <div class="field">
+              <label style="font-size:13px">Repite la nueva</label>
+              <input class="input" name="repetida" type="password" autoComplete="new-password" placeholder="Escríbela otra vez" style="min-height:50px">
+            </div>
+            <ul class="tf-muted-note" style="margin:0;padding-left:18px;line-height:1.7">
+              <li>Al menos 10 caracteres.</li>
+              <li>Distinta de la temporal.</li>
+            </ul>
+            <button type="submit" class="btn" disabled="{{ obligSubmitting }}" style="min-height:50px;width:100%;text-transform:uppercase;letter-spacing:.08em;background:#f4711a;border-color:#f4711a;color:#fff" style-hover="background:#d9600f;border-color:#d9600f">{{ obligLabel }}</button>
+          </div>
+        </form>
+
+        <sc-if value="{{ obligError }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:14px 16px;margin-top:20px;border:1px solid #f4711a;background:#fdeee1">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a3606;margin-bottom:4px">{{ obligErrorTitle }}</div>
+            <p style="margin:0;font-size:14px;color:#7a3606">{{ obligError }}</p>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <!-- ══ PREGUNTAS DEL CHATBOT (HU-21) ══ -->
     <sc-if value="{{ isChatbotAdmin }}" hint-placeholder-val="{{ false }}">
       <section style="max-width:960px">
@@ -1966,6 +2004,7 @@ class Component extends DCLogic {
     this.loginFormRef = React.createRef();
     this.pickupCodeRef = React.createRef();
     this.chatListRef = React.createRef();
+    this.obligRef = React.createRef();
     this.usuNuevoRef = React.createRef();
     this.usuEditarRef = React.createRef();
     this.state = {
@@ -1987,6 +2026,7 @@ class Component extends DCLogic {
       pickupCityText: '', pickupCityId: null, pickupCities: [], pickupOpen: false, pickupHours: null,
       pickupCreated: null, pickupCreatedGuide: '', pickupError: '', pickupNotice: '', pickupBusy: false,
       pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: [], pickupCode: '',
+      debeCambiarClave: false, obligSubmitting: false, obligError: '', obligErrorTitle: '',
       usuarios: null, usuLoading: false, usuError: '', usuErrorTitle: '', usuAviso: '',
       chatOpen: false, chatSesion: null, chatMsgs: [], chatBusy: false, chatError: '', chatSugerencias: null,
       faqLista: [], faqForm: null, faqBusy: false, faqLoading: false, faqError: '', faqNotice: '',
@@ -2040,7 +2080,9 @@ class Component extends DCLogic {
     try {
       const r = await this.api('/api/auth/sesion', { timeout: 45000, silencioso: true });
       if (r.status === 401) this.olvidarSesion();
-      else if (r.ok && r.data) this.setState({ usuario: r.data.username || '', roles: r.data.roles || this.state.roles });
+      else if (r.ok && r.data) this.setState({ usuario: r.data.username || '', roles: r.data.roles || this.state.roles,
+        debeCambiarClave: !!r.data.mustChangePassword,
+        route: r.data.mustChangePassword ? 'cambiar-clave' : this.state.route });
     } catch (e) {}
   }
 
@@ -2183,6 +2225,39 @@ class Component extends DCLogic {
     const u = (s.usuarios || []).find(x => x.username === s.usuSel);
     return (u && u.email) || '';
   }
+
+  cambiarClaveObligatoria = async (e) => {
+    e.preventDefault();
+    const f = new FormData(this.obligRef.current);
+    const actual = (f.get('actual') || '').toString();
+    const nueva = (f.get('nueva') || '').toString();
+    const repetida = (f.get('repetida') || '').toString();
+
+    if (nueva.length < 10) {
+      return this.setState({ obligErrorTitle: 'Contraseña muy corta', obligError: 'Debe tener al menos 10 caracteres.' });
+    }
+    if (nueva !== repetida) {
+      return this.setState({ obligErrorTitle: 'No coinciden', obligError: 'Las dos contraseñas que escribiste son distintas.' });
+    }
+
+    this.setState({ obligSubmitting: true, obligError: '' });
+    try {
+      const r = await this.api('/api/auth/clave/cambiar', { method: 'POST', body: { actual, nueva }, timeout: 45000 });
+      if (!r.ok) {
+        return this.setState({ obligSubmitting: false, obligErrorTitle: 'No se pudo cambiar',
+          obligError: (r.data && r.data.detail) || 'El servidor rechazó el cambio.' });
+      }
+      // El token actual sigue sin roles: hay que volver a entrar para recibir uno
+      // completo. Se cierra la sesion y se avisa de por que.
+      try { localStorage.removeItem('tf_token'); localStorage.removeItem('tf_roles'); } catch (err) {}
+      this.setState({ obligSubmitting: false, token: null, roles: '', usuario: '', debeCambiarClave: false,
+        route: 'login', loginErrorTitle: 'Contraseña actualizada',
+        loginError: 'Ya puedes entrar con tu nueva contraseña.' });
+    } catch (err) {
+      this.setState({ obligSubmitting: false, obligErrorTitle: 'Sin conexión',
+        obligError: 'No hay conexión con la API (' + err.message + ').' });
+    }
+  };
 
   goUsuarios = () => this.setState(
       { route: this.state.token ? 'usuarios' : 'login', usuSel: null, usuAviso: '', usuError: '' },
@@ -2922,7 +2997,14 @@ class Component extends DCLogic {
       if (!r.ok) return this.setState({ loginSubmitting: false, loginErrorTitle: 'Error ' + r.status, loginError: (r.data && r.data.detail) || 'No se pudo iniciar sesión.' });
       const roles = r.data.roles || 'OPERADOR';
       try { localStorage.setItem('tf_token', r.data.token); localStorage.setItem('tf_roles', roles); } catch (err2) {}
-      this.setState({ loginSubmitting: false, token: r.data.token, roles, usuario, loginError: '', loginErrorTitle: '', route: 'nuevo' });
+      // Con una clave temporal el token viene sin roles: no sirve para nada mas que
+      // cambiarla, asi que la aplicacion lleva directo a esa pantalla en lugar de
+      // dejar navegar por secciones que responderian 403.
+      if (r.data.mustChangePassword) {
+        return this.setState({ loginSubmitting: false, token: r.data.token, roles: '', usuario,
+          loginError: '', loginErrorTitle: '', debeCambiarClave: true, route: 'cambiar-clave' });
+      }
+      this.setState({ loginSubmitting: false, token: r.data.token, roles, usuario, loginError: '', loginErrorTitle: '', debeCambiarClave: false, route: 'nuevo' });
     } catch (err) {
       this.setState({ loginSubmitting: false, loginErrorTitle: 'Sin conexión', loginError: 'No hay conexión con ' + this.apiBaseFor('/api/auth/login') + ' (' + err.message + ').' });
     }
@@ -3558,7 +3640,8 @@ class Component extends DCLogic {
       claveType: s.showClave ? 'text' : 'password',
       toggleClave: () => this.setState(st => ({ showClave: !st.showClave })), isResult: s.route === 'result', isNuevo: s.route === 'nuevo',
       isEvento: s.route === 'evento', isLogin: s.route === 'login', isAdminScreen: s.route === 'admin',
-      loggedIn: !!s.token, loggedOut: !s.token, isAdmin: !!s.token && /ADMIN/.test(s.roles),
+      loggedIn: !!s.token && !s.debeCambiarClave, loggedOut: !s.token,
+      isAdmin: !!s.token && !s.debeCambiarClave && /ADMIN/.test(s.roles),
       rolesLabel: s.usuario ? s.usuario + ' · ' + s.roles : s.roles, needsLogin: !s.token,
       diag: s.diag,
       opsOpen: s.opsOpen, toggleOps: this.toggleOps, closeOps: this.closeOps, opsRef: this.opsRef,
@@ -3722,6 +3805,14 @@ class Component extends DCLogic {
       submitLogin: this.submitLogin, loginSubmitting: s.loginSubmitting,
       loginLabel: s.loginSubmitting ? 'Ingresando…' : 'Ingresar',
       loginError: s.loginError, loginErrorTitle: s.loginErrorTitle,
+      // ── Cambio obligatorio de la clave temporal ──
+      isCambioObligatorio: s.route === 'cambiar-clave',
+      obligRef: this.obligRef,
+      cambiarClaveObligatoria: this.cambiarClaveObligatoria,
+      obligSubmitting: s.obligSubmitting,
+      obligLabel: s.obligSubmitting ? 'Guardando…' : 'Guardar contraseña',
+      obligError: s.obligError, obligErrorTitle: s.obligErrorTitle,
+
       // ── Usuarios, roles y permisos (HU-11) ──
       isUsuarios: s.route === 'usuarios',
       goUsuarios: this.goUsuarios,
