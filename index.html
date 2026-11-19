@@ -237,6 +237,8 @@ a:hover { color: #f4711a; }
       <button onClick="{{ goHome }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff" style-hover="background:rgba(255,255,255,.12)">Rastrear</button>
       <button onClick="{{ goRecogida }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Pedir recogida</button>
       <button onClick="{{ goMiRecogida }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Mi recogida</button>
+      <button onClick="{{ goPqr }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">PQR</button>
+      <button onClick="{{ goPqrConsulta }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;background:none;border:0;padding:8px 14px;cursor:pointer;color:#fff">Consultar PQR</button>
       <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
       <div style="position:relative" ref="{{ opsRef }}">
         <button onClick="{{ toggleOps }}" style="font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.02em;background:none;border:1px solid transparent;border-radius:4px;padding:8px 14px;cursor:pointer;color:#fff;display:inline-flex;align-items:center;gap:7px" style-hover="background:rgba(255,255,255,.12)">
@@ -247,6 +249,7 @@ a:hover { color: #f4711a; }
           <div style="position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:#f7f7f8;border:1px solid rgba(29,31,32,.3);box-shadow:var(--shadow-md);z-index:40;display:flex;flex-direction:column">
             <button onClick="{{ goNuevo }}" style="text-align:left;padding:11px 14px;background:none;border:0;cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar envío</button>
             <button onClick="{{ goRecogidas }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20">Recogidas</button>
+            <sc-if value="{{ puedeAtenderPqr }}" hint-placeholder-val="{{ false }}"><button onClick="{{ goPqrGestion }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Atender PQR</button></sc-if>
             <button onClick="{{ goEvento }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Registrar evento</button>
             <button onClick="{{ goReporte }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Volumen de envíos</button>
                         <button onClick="{{ goRetrasados }}" style="text-align:left;padding:11px 14px;background:none;border:0;border-top:1px solid rgba(29,31,32,.14);cursor:pointer;font:inherit;font-size:14px;color:#1d1f20" style-hover="background:#e9f0fa">Envíos retrasados</button>
@@ -1422,6 +1425,90 @@ a:hover { color: #f4711a; }
       </section>
     </sc-if>
 
+    <!-- ══ PQR (HU-19) ══ -->
+    <sc-if value="{{ isPqr }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Atención al cliente</div>
+        <h1 style="margin:0 0 8px">Radicar una PQR</h1>
+        <p>Cuéntanos tu petición, queja o reclamo. Te daremos un número de radicado y te lo enviaremos por correo para que puedas consultar el estado.</p>
+        <sc-if value="{{ pqrCreated }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-status-success" role="status"><div><strong>Radicado: {{ pqrRadicado }}</strong><div>Estado: {{ pqrCreatedEstado }}.</div><p>{{ pqrCreatedMensaje }}</p><p>Guarda este número: lo necesitas, junto con tu correo, para consultar el estado.</p></div></div>
+          <button class="btn" onClick="{{ otraPqr }}" style="margin-top:14px">Radicar otra PQR</button>
+        </sc-if>
+        <sc-if value="{{ pqrMostrarForm }}" hint-placeholder-val="{{ true }}">
+          <form onSubmit="{{ submitPqr }}" noValidate="{{ true }}" class="tf-panel" style="padding:24px;display:grid;gap:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+              <div class="field"><label for="pqr-tipo">Tipo *</label><select id="pqr-tipo" class="input" name="tipo" required><option value="">Selecciona</option><option value="PETICION">Petición</option><option value="QUEJA">Queja</option><option value="RECLAMO">Reclamo</option></select></div>
+              <div class="field"><label for="pqr-nombre">Nombre de contacto *</label><input id="pqr-nombre" class="input" name="contactoNombre" maxLength="120" autoComplete="name" required></div>
+              <div class="field"><label for="pqr-email">Correo *</label><input id="pqr-email" class="input" name="contactoEmail" type="email" maxLength="254" autoComplete="email" required></div>
+              <div class="field"><label for="pqr-tel">Teléfono (opcional)</label><input id="pqr-tel" class="input" name="contactoTelefono" inputMode="tel" maxLength="20" autoComplete="tel"></div>
+              <div class="field"><label for="pqr-guia">Número de guía (opcional)</label><input id="pqr-guia" class="input" name="numeroSeguimiento" maxLength="14" placeholder="TFXXXXXXXXXXXX"></div>
+            </div>
+            <div class="field"><label for="pqr-desc">Descripción * (20 a 2000 caracteres)</label><textarea id="pqr-desc" class="input" name="descripcion" rows="6" maxLength="2000" required style="resize:vertical"></textarea></div>
+            <label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" name="aceptaTratamientoDatos"><span>Autorizo el tratamiento de mis datos personales para atender esta PQR.</span></label>
+            <p class="tf-muted-note">No escribas contraseñas ni datos de tarjetas. El texto se guarda tal como lo escribes y nunca se ejecuta.</p>
+            <sc-if value="{{ pqrError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pqrError }}</p></sc-if>
+            <button type="submit" class="btn btn-primary" disabled="{{ pqrBusy }}" style="justify-self:start;background:#f4711a;border-color:#f4711a;color:#fff">Radicar PQR</button>
+          </form>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{ isPqrConsulta }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Atención al cliente</div>
+        <h1 style="margin:0 0 8px">Consultar mi PQR</h1>
+        <p>Escribe tu número de radicado y el correo con el que radicaste.</p>
+        <form onSubmit="{{ consultarPqr }}" noValidate="{{ true }}" class="tf-panel" style="padding:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:end" autoComplete="off">
+          <div class="field" style="flex:1;min-width:200px"><label for="pqrc-radicado">Radicado</label><input id="pqrc-radicado" class="input" name="radicado" maxLength="40" placeholder="PQR-2026-00001" required></div>
+          <div class="field" style="flex:1;min-width:220px"><label for="pqrc-email">Correo registrado</label><input id="pqrc-email" class="input" name="email" type="email" maxLength="254" required></div>
+          <button class="btn btn-primary" type="submit" disabled="{{ pqrBusy }}">Consultar</button>
+        </form>
+        <sc-if value="{{ pqrError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pqrError }}</p></sc-if>
+        <sc-if value="{{ pqrBusy }}" hint-placeholder-val="{{ false }}"><p>Consultando…</p></sc-if>
+        <sc-if value="{{ pqrResultado }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="padding:24px;margin-top:18px;display:grid;gap:12px">
+            <div><h2 style="margin:0">{{ prRadicado }}</h2><strong>{{ prEstado }}</strong> · {{ prTipo }}</div>
+            <div>Radicada: {{ prRadicacion }} · Última actualización: {{ prActualizacion }}</div>
+            <sc-if value="{{ prTieneRespuesta }}" hint-placeholder-val="{{ false }}"><div><h3 style="margin:0 0 6px">Respuesta</h3><div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ prRespuesta }}</div></div></sc-if>
+            <h3 style="margin:8px 0 0">Historial</h3>
+            <sc-for list="{{ prHistorial }}" as="ev"><div style="border-top:1px solid #ddd;padding-top:8px">{{ ev.label }}</div></sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+    <sc-if value="{{ isPqrGestion }}" hint-placeholder-val="{{ false }}">
+      <section>
+        <div class="tf-section-kicker">Operaciones / PQR</div>
+        <h1 style="margin:0 0 8px">Atender PQR</h1>
+        <p>Abre un caso, responde y cambia su estado. Quien radicó recibe un aviso por correo.</p>
+        <div class="tf-panel" style="padding:20px;display:grid;gap:16px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label for="pqr-filtro">Estado</label><select id="pqr-filtro" class="input" value="{{ pqrFiltro }}" onChange="{{ filtrarPqr }}" style="width:auto"><option value="">Todos</option><option value="RECIBIDA">Recibida</option><option value="EN_TRAMITE">En trámite</option><option value="RESUELTA">Resuelta</option><option value="CERRADA">Cerrada</option></select></div>
+          <sc-if value="{{ pqrNotice }}" hint-placeholder-val="{{ false }}"><div class="tf-inline-info" role="status">{{ pqrNotice }}</div></sc-if>
+          <sc-if value="{{ pqrError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="color:#7a3606">{{ pqrError }}</p></sc-if>
+          <sc-if value="{{ pqrLoading }}" hint-placeholder-val="{{ false }}"><p>Cargando…</p></sc-if>
+          <sc-if value="{{ pqrSinFilas }}" hint-placeholder-val="{{ false }}"><p class="tf-muted-note">No hay PQR con este filtro.</p></sc-if>
+          <div style="display:grid;gap:8px"><sc-for list="{{ pqrFilas }}" as="row"><button class="btn" onClick="{{ row.open }}" style="text-align:left;white-space:normal;overflow-wrap:anywhere">{{ row.label }}</button></sc-for></div>
+        </div>
+        <sc-if value="{{ pqrDetalle }}" hint-placeholder-val="{{ false }}">
+          <div class="tf-panel" style="padding:24px;margin-top:18px;display:grid;gap:14px">
+            <div><h2 style="margin:0">{{ pdqRadicado }}</h2><strong>{{ pdqEstado }}</strong> · {{ pdqTipo }} · {{ pdqRadicacion }}</div>
+            <div style="overflow-wrap:anywhere">Contacto: {{ pdqNombre }} · {{ pdqEmail }} · {{ pdqTelefono }}<br>Guía: {{ pdqGuia }}</div>
+            <div><h3 style="margin:0 0 6px">Descripción</h3><div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ pdqDescripcion }}</div></div>
+            <sc-if value="{{ pdqTieneRespuesta }}" hint-placeholder-val="{{ false }}"><div><h3 style="margin:0 0 6px">Respuesta ({{ pdqRespondidoPor }})</h3><div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ pdqRespuesta }}</div></div></sc-if>
+            <sc-if value="{{ pdqPuedeCambiar }}" hint-placeholder-val="{{ false }}">
+              <form onSubmit="{{ cambiarEstadoPqr }}" noValidate="{{ true }}" style="display:grid;gap:10px">
+                <div class="field"><label for="pqr-nuevo">Pasar a</label><select id="pqr-nuevo" class="input" name="estado" style="width:auto"><sc-for list="{{ pdqSiguientes }}" as="op"><option value="{{ op.valor }}">{{ op.etiqueta }}</option></sc-for></select></div>
+                <div class="field"><label for="pqr-resp">Respuesta (obligatoria para resolver, 10 a 2000 caracteres)</label><textarea id="pqr-resp" class="input" name="respuesta" rows="5" maxLength="2000" style="resize:vertical"></textarea></div>
+                <button class="btn btn-primary" type="submit" disabled="{{ pqrBusy }}" style="justify-self:start">Guardar cambio</button>
+              </form>
+            </sc-if>
+            <h3 style="margin:8px 0 0">Historial</h3>
+            <sc-for list="{{ pdqHistorial }}" as="ev"><div style="border-top:1px solid #ddd;padding-top:8px">{{ ev.label }}</div></sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <!-- ══ USUARIOS, ROLES Y PERMISOS (HU-11) ══ -->
     <sc-if value="{{ isUsuarios }}" hint-placeholder-val="{{ false }}">
       <section style="max-width:960px">
@@ -1647,6 +1734,11 @@ const DOC_HINTS = {
 };
 const TN_RE = /^TF[A-Z0-9]{12}$/;
 const PICKUP_RE = /^RC[A-Z0-9]{12}$/;
+const PQR_TIPOS = { PETICION: 'Petición', QUEJA: 'Queja', RECLAMO: 'Reclamo' };
+const PQR_ESTADOS = { RECIBIDA: 'Recibida', EN_TRAMITE: 'En trámite', RESUELTA: 'Resuelta', CERRADA: 'Cerrada' };
+// A qué estados puede pasar un caso (el servidor valida de nuevo y responde 409 si no corresponde).
+const PQR_SIGUIENTES = { RECIBIDA: ['EN_TRAMITE'], EN_TRAMITE: ['RESUELTA'], RESUELTA: ['CERRADA', 'EN_TRAMITE'], CERRADA: [] };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PICKUP_STATES = { REQUESTED: 'Solicitada', SCHEDULED: 'Programada', ON_THE_WAY: 'En camino', PICKED_UP: 'Recogida', CANCELLED: 'Cancelada' };
 const PICKUP_EVENTS = { CREATED: 'Solicitada', SCHEDULED: 'Programada', RESCHEDULED: 'Reprogramada', ASSIGNED: 'Asignada', DISPATCHED: 'Despachada', COMPLETED: 'Recogida', CANCELLED: 'Cancelada', REJECTED: 'Rechazada', SHIPMENT_LINKED: 'Guía vinculada' };
 
@@ -1835,6 +1927,7 @@ class Component extends DCLogic {
       pickupCreated: null, pickupCreatedGuide: '', pickupError: '', pickupNotice: '', pickupBusy: false,
       pickupList: [], pickupDetail: null, pickupFilter: '', pickupLoading: false, pickupAssignees: [], pickupCode: '',
       usuarios: null, usuLoading: false, usuError: '', usuErrorTitle: '', usuAviso: '',
+      pqrBusy: false, pqrLoading: false, pqrError: '', pqrNotice: '', pqrCreated: null, pqrResultado: null, pqrLista: [], pqrDetalle: null, pqrFiltro: '',
       usuSel: null, usuNuevoAbierto: false, usuOcupado: false, usuAuditoria: null, usuAuditoriaAbierta: false
     };
   }
@@ -1847,7 +1940,13 @@ class Component extends DCLogic {
     }
   };
   setState(update, cb) {
-    const patch = typeof update === 'function' ? update(this.state) : update;
+    let patch = typeof update === 'function' ? update(this.state) : update;
+    // HU-19: al salir de una pantalla de PQR se descarta lo que haya quedado (caso abierto, bandeja,
+    // radicado mostrado) y las respuestas que lleguen tarde se ignoran por el contador de sesión.
+    if (patch.route && patch.route !== this.state.route && String(this.state.route).startsWith('pqr')) {
+      this._pqrSession = (this._pqrSession || 0) + 1;
+      patch = { pqrBusy: false, pqrLoading: false, pqrError: '', pqrNotice: '', pqrCreated: null, pqrResultado: null, pqrLista: [], pqrDetalle: null, pqrFiltro: '', ...patch };
+    }
     if (patch.route && patch.route !== this.state.route && ['recogida', 'mi-recogida', 'recogidas'].includes(this.state.route)) {
       if (this.state.route === 'recogida' && this.state.pickupBusy) return;
       if (this.state.route === 'recogida' && this.state.pickupCreated && !window.confirm('Guarda el número y el código de gestión antes de salir. ¿Deseas salir?')) return;
@@ -1886,7 +1985,9 @@ class Component extends DCLogic {
     this.setState({ token: null, roles: '', usuario: '', created: null, comprobante: null, evCtx: null, acciones: [], ubicacionActual: null,
       tipoSel: '', centroId: null, evOk: null, evClave: null, adminResult: null, opsOpen: false, userOpen: false,
       repData: null, repError: '', retData: null, retError: '', tieData: null, tieError: '',
-      pickupCreated: null, pickupCreatedGuide: '', pickupCode: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [] });
+      pickupCreated: null, pickupCreatedGuide: '', pickupCode: '', pickupDetail: null, pickupList: [], pickupCityText: '', pickupCityId: null, pickupCities: [], pickupError: '', pickupNotice: '', pickupBusy: false, pickupLoading: false, pickupAssignees: [],
+      pqrLista: [], pqrDetalle: null, pqrNotice: '', pqrError: '', pqrBusy: false, pqrLoading: false });
+    this._pqrSession = (this._pqrSession || 0) + 1;
   }
 
   get base() { return (this.props.apiBaseUrl || 'https://trackflow-envios-api.onrender.com').replace(/\/$/, ''); }
@@ -1896,7 +1997,7 @@ class Component extends DCLogic {
     if (/^\/api\/(tracking|reports)(\/|\?|$)/.test(path)) return 'reports';
     if (/^\/api\/centers(\/|\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/(events|route|actions)(\/|\?|$)/.test(path)) return 'logistics';
-    if (/^\/api\/(auth|admin|cities|pickups)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)
+    if (/^\/api\/(auth|admin|cities|pickups|pqr|chatbot)(\/|\?|$)/.test(path) || /^\/api\/shipments(\?|$)/.test(path)
       || /^\/api\/shipments\/[^\/?]+\/receipt(\?|$)/.test(path)) return 'shipments';
     return null;
   }
@@ -1973,6 +2074,13 @@ class Component extends DCLogic {
     this.cargarHorarioPickup();
     this.cargarAsignablesPickup();
     this.cargarPickups(this.state.pickupFilter);
+  };
+  goPqr = () => this.setState({ route: 'pqr', opsOpen: false, pqrError: '', pqrNotice: '' });
+  goPqrConsulta = () => this.setState({ route: 'pqr-consulta', opsOpen: false, pqrError: '', pqrNotice: '' });
+  goPqrGestion = () => {
+    if (!this.state.token) return this.setState({ route: 'login', opsOpen: false });
+    this.setState({ route: 'pqr-gestion', opsOpen: false, pqrError: '', pqrNotice: '' });
+    this.cargarPqrs(this.state.pqrFiltro);
   };
   toggleOps = () => this.setState(s => ({ opsOpen: !s.opsOpen }));
   closeOps = () => this.setState({ opsOpen: false });
@@ -2372,6 +2480,113 @@ class Component extends DCLogic {
       if (!r.ok) throw new Error((r.data && r.data.detail) || (r.status === 429 ? 'Demasiados intentos. ' + this.esperaDeReintento(r) : 'No se pudo procesar la operación.'));
       this.setState({ pickupBusy: false, pickupNotice: 'Operación aceptada y en procesamiento. Actualiza el detalle para confirmar el estado.' });
     } catch (err) { if (session === this._pickupSession && (!selfService || request === this._pickupDetailRequest)) this.setState({ pickupBusy: false, pickupError: err.message }); }
+  }
+
+  // ── PQR (HU-19) ──
+  // Todo texto escrito por una persona (descripción, nombre, respuesta) se pinta solo con {{ }},
+  // que lo inserta como texto: nunca se interpreta como HTML ni como código.
+  submitPqr = async (e) => {
+    e.preventDefault();
+    if (this.state.pqrBusy) return;
+    const session = this._pqrSession;
+    const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
+    const body = { tipo: v('tipo'), descripcion: v('descripcion').replace(/\r\n/g, '\n'), contactoNombre: v('contactoNombre'), contactoEmail: v('contactoEmail'),
+      contactoTelefono: v('contactoTelefono') || null, numeroSeguimiento: v('numeroSeguimiento').toUpperCase() || null, aceptaTratamientoDatos: !!f.get('aceptaTratamientoDatos') };
+    const error = !PQR_TIPOS[body.tipo] ? 'Selecciona el tipo: petición, queja o reclamo.'
+      : body.descripcion.length < 20 || body.descripcion.length > 2000 ? 'La descripción debe tener entre 20 y 2000 caracteres.'
+      : body.contactoNombre.length < 2 || body.contactoNombre.length > 120 ? 'El nombre debe tener entre 2 y 120 caracteres.'
+      : !EMAIL_RE.test(body.contactoEmail) || body.contactoEmail.length > 254 ? 'Escribe un correo válido.'
+      : body.contactoTelefono && !/^[0-9+ ]{7,20}$/.test(body.contactoTelefono) ? 'El teléfono debe tener entre 7 y 20 dígitos (puede llevar + y espacios).'
+      : body.numeroSeguimiento && !TN_RE.test(body.numeroSeguimiento) ? 'La guía debe ser TF seguida de 12 caracteres alfanuméricos.'
+      : !body.aceptaTratamientoDatos ? 'Debes aceptar el tratamiento de tus datos para radicar la PQR.'
+      : '';
+    if (error) return this.setState({ pqrError: error });
+    this.setState({ pqrBusy: true, pqrError: '' });
+    try {
+      let r;
+      try {
+        r = await this.api('/api/pqr', { method: 'POST', body, publico: true, timeout: 60000 });
+      } catch (err) {
+        throw new Error(err.message + '. Tu PQR podría haberse registrado; revisa tu correo antes de enviarla otra vez.');
+      }
+      if (session !== this._pqrSession) return;
+      if (r.status === 429) throw new Error('Has enviado muchas solicitudes. ' + this.esperaDeReintento(r));
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo radicar la PQR.');
+      this.setState({ pqrBusy: false, pqrCreated: r.data });
+    } catch (err) { if (session === this._pqrSession) this.setState({ pqrBusy: false, pqrError: err.message }); }
+  };
+  otraPqr = () => this.setState({ pqrCreated: null, pqrError: '' });
+  consultarPqr = async (e) => {
+    e.preventDefault();
+    if (this.state.pqrBusy) return;
+    const session = this._pqrSession;
+    const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
+    const body = { radicado: v('radicado').toUpperCase(), email: v('email') };
+    const error = !body.radicado || body.radicado.length > 40 ? 'Escribe el número de radicado.'
+      : !EMAIL_RE.test(body.email) ? 'Escribe el correo con el que radicaste la PQR.' : '';
+    if (error) return this.setState({ pqrError: error, pqrResultado: null });
+    this.setState({ pqrBusy: true, pqrError: '', pqrResultado: null });
+    try {
+      const r = await this.api('/api/pqr/consulta', { method: 'POST', body, publico: true, timeout: 45000 });
+      if (session !== this._pqrSession) return;
+      if (r.status === 404) throw new Error('No encontramos una PQR con esos datos. Verifica el radicado y el correo registrado.');
+      if (r.status === 429) throw new Error('Demasiadas consultas. ' + this.esperaDeReintento(r));
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo consultar la PQR.');
+      this.setState({ pqrBusy: false, pqrResultado: r.data });
+    } catch (err) { if (session === this._pqrSession) this.setState({ pqrBusy: false, pqrError: err.message }); }
+  };
+  filtrarPqr = (e) => { const estado = e.target.value; this.setState({ pqrFiltro: estado }); this.cargarPqrs(estado); };
+  async cargarPqrs(estado) {
+    const session = this._pqrSession;
+    this.setState({ pqrLoading: true, pqrError: '', pqrDetalle: null });
+    try {
+      const r = await this.api('/api/pqr?size=50' + (estado ? '&estado=' + encodeURIComponent(estado) : ''), { timeout: 45000 });
+      if (session !== this._pqrSession) return;
+      if (r.status === 401) return this.setState({ pqrLoading: false });
+      if (r.status === 403) throw new Error('Solo supervisores y administradores pueden atender PQR.');
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo cargar la bandeja.');
+      this.setState({ pqrLoading: false, pqrLista: Array.isArray(r.data) ? r.data : [] });
+    } catch (err) { if (session === this._pqrSession) this.setState({ pqrLoading: false, pqrError: err.message }); }
+  }
+  async abrirPqr(radicado) {
+    const session = this._pqrSession;
+    this.setState({ pqrLoading: true, pqrError: '', pqrNotice: '' });
+    try {
+      const r = await this.api('/api/pqr/' + encodeURIComponent(radicado), { timeout: 45000 });
+      if (session !== this._pqrSession) return;
+      if (r.status === 401) return this.setState({ pqrLoading: false });
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo abrir la PQR.');
+      this.setState({ pqrLoading: false, pqrDetalle: r.data });
+    } catch (err) { if (session === this._pqrSession) this.setState({ pqrLoading: false, pqrError: err.message }); }
+  }
+  cambiarEstadoPqr = async (e) => {
+    e.preventDefault();
+    const d = this.state.pqrDetalle;
+    if (!d || this.state.pqrBusy) return;
+    const session = this._pqrSession;
+    const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
+    const body = { estado: v('estado'), respuesta: v('respuesta').replace(/\r\n/g, '\n') || null };
+    const error = !(PQR_SIGUIENTES[d.estado] || []).includes(body.estado) ? 'Elige un estado al que se pueda pasar desde el actual.'
+      : body.estado === 'RESUELTA' && (!body.respuesta || body.respuesta.length < 10) ? 'Para resolver escribe una respuesta de al menos 10 caracteres.'
+      : body.respuesta && body.respuesta.length > 2000 ? 'La respuesta no puede pasar de 2000 caracteres.' : '';
+    if (error) return this.setState({ pqrError: error });
+    this.setState({ pqrBusy: true, pqrError: '', pqrNotice: '' });
+    try {
+      const r = await this.api('/api/pqr/' + encodeURIComponent(d.radicado) + '/estado', { method: 'POST', body, timeout: 45000 });
+      if (session !== this._pqrSession) return;
+      if (r.status === 401) return this.setState({ pqrBusy: false });
+      if (r.status === 409) throw new Error((r.data && r.data.detail) || 'Ese cambio de estado no está permitido.');
+      if (!r.ok) throw new Error((r.data && r.data.detail) || 'No se pudo cambiar el estado.');
+      this.setState({ pqrBusy: false });
+      await this.abrirPqr(d.radicado);
+      await this.cargarPqrsSinCerrarDetalle();
+      if (session === this._pqrSession) this.setState({ pqrNotice: 'Estado actualizado. Se avisó a quien radicó la PQR.' });
+    } catch (err) { if (session === this._pqrSession) this.setState({ pqrBusy: false, pqrError: err.message }); }
+  };
+  async cargarPqrsSinCerrarDetalle() {
+    const session = this._pqrSession;
+    const r = await this.api('/api/pqr?size=50' + (this.state.pqrFiltro ? '&estado=' + encodeURIComponent(this.state.pqrFiltro) : ''), { timeout: 45000, silencioso: true });
+    if (session === this._pqrSession && r.ok && Array.isArray(r.data)) this.setState({ pqrLista: r.data });
   }
 
   // ── registrar envío ──
@@ -2883,6 +3098,34 @@ class Component extends DCLogic {
     if (isNaN(d)) return '';
     return d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
   }
+  vistaPqr(s) {
+    const d = s.pqrDetalle, c = s.pqrCreated, r = s.pqrResultado;
+    const filas = (s.pqrLista || []).map(p => ({
+      label: [p.radicado, PQR_TIPOS[p.tipo] || p.tipo, PQR_ESTADOS[p.estado] || p.estado, p.contactoNombre, this.fmt(p.fechaRadicacion)].join(' · '),
+      open: () => this.abrirPqr(p.radicado)
+    }));
+    const hist = h => (h || []).map(e => ({ label: this.fmt(e.fecha) + ' · ' + (PQR_ESTADOS[e.estado] || e.estado) }));
+    return {
+      isPqr: s.route === 'pqr', isPqrConsulta: s.route === 'pqr-consulta', isPqrGestion: s.route === 'pqr-gestion',
+      goPqr: this.goPqr, goPqrConsulta: this.goPqrConsulta, goPqrGestion: this.goPqrGestion,
+      puedeAtenderPqr: !!s.token && /SUPERVISOR|ADMIN/.test(s.roles),
+      submitPqr: this.submitPqr, otraPqr: this.otraPqr, consultarPqr: this.consultarPqr, filtrarPqr: this.filtrarPqr, cambiarEstadoPqr: this.cambiarEstadoPqr,
+      pqrBusy: s.pqrBusy, pqrLoading: s.pqrLoading, pqrError: s.pqrError, pqrNotice: s.pqrNotice, pqrFiltro: s.pqrFiltro,
+      pqrMostrarForm: !c,
+      pqrCreated: !!c, pqrRadicado: c ? c.radicado : '', pqrCreatedEstado: c ? (PQR_ESTADOS[c.estado] || c.estado) : '', pqrCreatedMensaje: c ? c.mensaje || '' : '',
+      pqrResultado: !!r, prRadicado: r ? r.radicado : '', prTipo: r ? PQR_TIPOS[r.tipo] || r.tipo : '', prEstado: r ? PQR_ESTADOS[r.estado] || r.estado : '',
+      prRadicacion: r ? this.fmt(r.fechaRadicacion) : '', prActualizacion: r ? this.fmt(r.fechaActualizacion) : '',
+      prRespuesta: r && r.respuesta ? r.respuesta : '', prTieneRespuesta: !!(r && r.respuesta), prHistorial: r ? hist(r.historial) : [],
+      pqrFilas: filas, pqrHayFilas: filas.length > 0, pqrSinFilas: !s.pqrLoading && filas.length === 0,
+      pqrDetalle: !!d, pdqRadicado: d ? d.radicado : '', pdqTipo: d ? PQR_TIPOS[d.tipo] || d.tipo : '', pdqEstado: d ? PQR_ESTADOS[d.estado] || d.estado : '',
+      pdqDescripcion: d ? d.descripcion : '', pdqNombre: d ? d.contactoNombre : '', pdqEmail: d ? d.contactoEmail : '', pdqTelefono: d && d.contactoTelefono ? d.contactoTelefono : '—',
+      pdqGuia: d && d.numeroSeguimiento ? d.numeroSeguimiento : '—', pdqRespuesta: d && d.respuesta ? d.respuesta : '', pdqTieneRespuesta: !!(d && d.respuesta),
+      pdqRespondidoPor: d && d.respondidoPor ? d.respondidoPor : '', pdqRadicacion: d ? this.fmt(d.fechaRadicacion) : '', pdqHistorial: d ? hist(d.historial) : [],
+      pdqSiguientes: d ? (PQR_SIGUIENTES[d.estado] || []).map(e => ({ valor: e, etiqueta: PQR_ESTADOS[e] })) : [],
+      pdqPuedeCambiar: !!d && (PQR_SIGUIENTES[d.estado] || []).length > 0
+    };
+  }
+
   fmt(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -3063,6 +3306,7 @@ class Component extends DCLogic {
       ...this.vistaReporte(s),
       ...this.vistaRetrasados(s),
       ...this.vistaTiempos(s),
+      ...this.vistaPqr(s),
       isRecogida: s.route === 'recogida', isRecogidas: s.route === 'recogidas', isMiRecogida: s.route === 'mi-recogida',
       goRecogida: this.goRecogida, goRecogidas: this.goRecogidas, goMiRecogida: this.goMiRecogida, buscarMiPickup: this.buscarMiPickup, pickupCodeRef: this.pickupCodeRef,
       pickupCityText: s.pickupCityText, pickupCityOpen: s.pickupOpen && !!s.pickupCityText.trim() && !s.pickupCityId,
