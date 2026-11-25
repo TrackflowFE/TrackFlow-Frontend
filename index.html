@@ -2994,6 +2994,10 @@ class Component extends DCLogic {
       const r = await this.api('/api/auth/login', { method: 'POST', body: { username: usuario, password: clave }, publico: true, timeout: 45000 });
       if (r.status === 503) return this.setState({ loginSubmitting: false, loginErrorTitle: 'Entorno sin credenciales', loginError: 'No hay credenciales configuradas en este entorno.' });
       if (r.status === 401) return this.setState({ loginSubmitting: false, loginErrorTitle: 'Credenciales incorrectas', loginError: 'El usuario o la clave no coinciden.' });
+      // La API limita los intentos por IP para frenar la fuerza bruta. Sin este caso se
+      // veria "Error 429", que no le dice nada a quien solo escribio mal su clave.
+      if (r.status === 429) return this.setState({ loginSubmitting: false, loginErrorTitle: 'Demasiados intentos',
+        loginError: 'Se hicieron demasiados intentos desde esta red. Espera ' + (Number(r.retryAfter) || 60) + ' segundos y vuelve a intentarlo.' });
       if (!r.ok) return this.setState({ loginSubmitting: false, loginErrorTitle: 'Error ' + r.status, loginError: (r.data && r.data.detail) || 'No se pudo iniciar sesión.' });
       const roles = r.data.roles || 'OPERADOR';
       try { localStorage.setItem('tf_token', r.data.token); localStorage.setItem('tf_roles', roles); } catch (err2) {}
